@@ -48,6 +48,14 @@ R2 覆盖度阶跃平滑（2026-08-24）：
 - 修复：线性 ramp，锚点不变（cov=0 → 0.7 下限，cov≥0.34 → 1.0 满分），
   区间内平滑过渡。57 条评估集：期望文档转直接命中（link 补位不再必需），
   其余 56 条 0 退化；对库外查询的压制语义保留（低覆盖仍被压向 0.7）。
+
+R3 打分性能缓存（2026-08-24）：
+- 旧版 _bm25(text, term, field) 对每个 (doc, field, term) 组合都重新
+  tokenize 整段 blob：188 篇 × 7 字段 × ~9 词 ≈ 1.2 万次/查询，854 ms/条、
+  57 条全量 48.7s，cProfile 显示 97% 耗时在 tokenize。
+- 修复：init 时对每篇文档每字段一次性分词，缓存词频 Counter（tf）、
+  字段长度（dl）与小写 blob（覆盖度检测用）；_bm25 改为查表纯算术，
+  _build_bm25_stats 复用同一份缓存（统计与打分口径仍一致）。
 """
 from __future__ import annotations
 
@@ -55,7 +63,7 @@ import json
 import math
 import os
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
@@ -196,6 +204,24 @@ class KbRetriever:
             }
             for d in self.docs
         }
+        # R3：tokenize 结果缓存——init 时每字段只分词一次：
+        #   _field_tf   path -> {field: Counter(token -> tf)}   BM25 的 tf 输入
+        #   _field_dl   path -> {field: int}                    BM25 的 dl 输入
+        #   _blobs_low  path -> {field: lower(blob)}            覆盖度子串检测
+        # 打分阶段（_score_doc/_bm25）纯查表，消除每查询对同一 blob 的
+        # 重复分词（旧版 188 篇 × 7 字段 × ~9 词 ≈ 1.2 万次 tokenize/查询）。
+        self._field_tf: dict[str, dict[str, Counter]] = {}
+        self._field_dl: dict[str, dict[str, int]] = {}
+        self._blobs_low: dict[str, dict[str, str]] = {}
+        for p, blobs in self._blobs.items():
+            self._field_tf[p] = {}
+            self._field_dl[p] = {}
+            self._blobs_low[p] = {}
+            for f, blob in blobs.items():
+                toks = tokenize(blob)
+                self._field_tf[p][f] = Counter(toks)
+                self._field_dl[p][f] = len(toks)
+                self._blobs_low[p][f] = blob.lower()
         # P0-1：BM25 统计（df / N / avgdl）预计算一次
         self._build_bm25_stats()
         # P0-2：wikilink 出链图（索引过期/解析异常时退化为空图，不影响主流程）
@@ -205,16 +231,16 @@ class KbRetriever:
     def _build_bm25_stats(self) -> None:
         """df 按文档级统计（term 出现在任一字段即计入该文档）；
         avgdl **按字段**统计（_bm25 归一的是单字段 dl，口径必须一致）。
-        统计口径与打分一致：都基于别名扩展后的字段 blob。
+        R3：直接复用 init 时缓存的每字段词频表（统计与打分口径一致）。
         """
         df: dict[str, int] = defaultdict(int)
         field_len: dict[str, int] = defaultdict(int)
         for d in self.docs:
             seen: set[str] = set()
             for f in FIELD_BOOST:
-                toks = tokenize(self._blobs[d["path"]][f])
-                field_len[f] += len(toks)
-                for t in set(toks):
+                tf = self._field_tf[d["path"]][f]
+                field_len[f] += self._field_dl[d["path"]][f]
+                for t in tf:
                     if t not in seen:
                         df[t] += 1
                         seen.add(t)
@@ -225,12 +251,12 @@ class KbRetriever:
         self._avgdl = {f: (field_len[f] / n if n else 0.0) or 1.0
                        for f in FIELD_BOOST}
 
-    def _bm25(self, text: str, term: str, field: str = "body_text") -> float:
-        toks = tokenize(text)
-        tf = toks.count(term)
+    def _bm25(self, tf_counter: Counter, dl: int, term: str,
+              field: str = "body_text") -> float:
+        """查表版 BM25（R3）：tf/dl 来自 init 缓存，不再重复 tokenize。"""
+        tf = tf_counter.get(term, 0)
         if tf == 0:
             return 0.0
-        dl = len(toks)
         avgdl = self._avgdl.get(field) or 1.0
         idf = math.log((self._N - self._df.get(term, 0) + 0.5)
                        / (self._df.get(term, 0) + 0.5) + 1)
@@ -284,11 +310,14 @@ class KbRetriever:
     def _score_doc(self, doc: dict, terms: list[str]) -> tuple[float, list[str]]:
         matched_headings: set[str] = set()
         score = 0.0
-        blobs = self._blobs[doc["path"]]  # 已做别名扩展的字段 blob（缓存）
+        p = doc["path"]
+        tf_by_field = self._field_tf[p]   # R3：查表（init 已缓存，不再分词）
+        dl_by_field = self._field_dl[p]
+        blobs_low = self._blobs_low[p]
         for f, boost in FIELD_BOOST.items():
-            blob = blobs[f]
+            tf_counter, dl = tf_by_field[f], dl_by_field[f]
             for term in terms:
-                s = self._bm25(blob, term, f) * boost
+                s = self._bm25(tf_counter, dl, term, f) * boost
                 score += s
                 # 记录命中的章节（仅 headings 字段用于章节级检索）
                 if f == "headings" and s > 0:
@@ -299,7 +328,7 @@ class KbRetriever:
         # cov=0 → 0.7（保留低覆盖压制，不砍到 0.5），cov≥0.34 → 1.0（满分），
         # 区间内线性过渡——边界处不再出现 ~43% 的分数跳变与排名翻转。
         matched = sum(1 for t in terms
-                      if any(t in blobs[f].lower() for f in FIELD_BOOST))
+                      if any(t in blobs_low[f] for f in FIELD_BOOST))
         coverage = matched / len(terms) if terms else 0.0
         factor = COVERAGE_FLOOR + (1.0 - COVERAGE_FLOOR) * min(
             coverage / COVERAGE_FULL, 1.0)

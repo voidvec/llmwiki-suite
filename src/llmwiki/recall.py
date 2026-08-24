@@ -56,6 +56,19 @@ R3 打分性能缓存（2026-08-24）：
 - 修复：init 时对每篇文档每字段一次性分词，缓存词频 Counter（tf）、
   字段长度（dl）与小写 blob（覆盖度检测用）；_bm25 改为查表纯算术，
   _build_bm25_stats 复用同一份缓存（统计与打分口径仍一致）。
+
+P3 索引过期检测（2026-08-24）：
+- 索引与磁盘脱节时召回原本无任何感知（实测三类场景全中）：改内容后查询
+  返回过时候选、新增文档不可见、删除后返回幽灵文档且 read_doc 抛
+  FileNotFoundError。
+- 修复：gen_index（schema 1.1）为每篇文档记录 mtime_ns + size + content_hash
+  指纹；check_freshness() 做三向比对——changed/deleted 走 os.stat（mtime+size
+  一致即快路径通过；不一致再以 blake2b 内容哈希决胜，避免 git checkout/pull
+  恢复内容刷新 mtime 造成的常态假阳性；188 篇实测 ~11 ms），added 反向扫描
+  索引外带 frontmatter 的 .md（与 collect 同规则）。
+  init 默认执行一次并存 self.freshness（check_stale=False 可关）；
+  长驻进程（如 wechat_bridge）可按请求调用 check_freshness() 复查。
+  旧版索引（无指纹字段）→ unknown=True，建议重建后启用检测。
 """
 from __future__ import annotations
 
@@ -68,7 +81,9 @@ from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
 from . import defaults
-from .kb_core import WIKILINK_RE, build_link_index, resolve_wikilink
+from .gen_index import content_hash
+from .kb_core import (FM_RE, WIKILINK_RE, build_link_index,
+                      resolve_wikilink)
 
 # BM25 字段 boost（P0-1）：标题最高，标签/章节次之，正文与描述/摘要同权
 FIELD_BOOST = {
@@ -174,19 +189,57 @@ class RecallHit:
     via_link: bool = False  # True = 由 wikilink 图扩展补位（P0-2）
 
 
+@dataclass
+class FreshnessReport:
+    """P3 索引过期检测报告（KbRetriever.check_freshness 的返回值）。
+
+    stale    True = 索引与磁盘存在任一差异（changed/added/deleted 非空）
+    unknown  True = 索引由 schema < 1.1 的旧版生成（无指纹字段），无法判定；
+             重建索引（llmwiki index）后即启用检测
+    """
+    stale: bool
+    unknown: bool = False
+    changed: list[str] = field(default_factory=list)  # mtime/size 与磁盘不一致
+    added: list[str] = field(default_factory=list)    # 磁盘有、索引无（不可见）
+    deleted: list[str] = field(default_factory=list)  # 索引有、磁盘无（幽灵文档）
+
+    def summary(self) -> str:
+        """单行摘要，供 CLI / bridge 告警文案复用。"""
+        if self.unknown:
+            return "索引由旧版生成（无过期指纹），无法检测索引是否过期"
+        parts = []
+        if self.changed:
+            parts.append("%d 篇已修改" % len(self.changed))
+        if self.added:
+            parts.append("%d 篇未入索引" % len(self.added))
+        if self.deleted:
+            parts.append("%d 篇已删除" % len(self.deleted))
+        return "索引已过期：" + "、".join(parts) if parts else "索引与磁盘一致"
+
+
 class KbRetriever:
     def __init__(self, index_path: str | os.PathLike,
                  exclude_dirs: Optional[set] = None,
                  alias_groups: Optional[list] = None,
-                 min_score_per_term: Optional[float] = None):
+                 min_score_per_term: Optional[float] = None,
+                 check_stale: bool = True):
         with open(index_path, "r", encoding="utf-8") as f:
             self.index = json.load(f)
         self.root = os.path.dirname(os.path.abspath(index_path))
         self.docs = self.index["documents"]
+        # P3：过期检测的文件系统扫描口径（与 gen_index.collect 的排除规则一致）；
+        # None → 套件默认排除集（cfg.exclude_dirs = 默认集 + toml 追加，正常链路
+        # 都显式传入；兜底用默认集避免扫到 .git/scripts 等目录产生假 added）
+        self.exclude_dirs = (set(exclude_dirs) if exclude_dirs is not None
+                             else set(defaults.DEFAULT_EXCLUDE_DIRS))
         self.cat_index = self.index.get("category_index", {})
         self.tag_index = self.index.get("tag_index", {})
         # path -> doc 快速查表
         self._by_path = {d["path"]: d for d in self.docs}
+        # P3：init 时做一次过期快照（~11 ms / 188 篇），结果供调用方消费；
+        # 长驻进程中文件可能继续变化，可按需调用 check_freshness() 复查。
+        # 库层保持安静（不打印不抛错），告警由 CLI / bridge 决定。
+        self.freshness = self.check_freshness() if check_stale else None
         # P1：别名组（短语级双向扩展，文档侧与查询侧共用）
         self.alias_groups = [list(g) for g in (alias_groups or [])]
         # R1：每词阈值（查询长度感知的相关性门槛）。None → 套件默认。
@@ -225,7 +278,74 @@ class KbRetriever:
         # P0-1：BM25 统计（df / N / avgdl）预计算一次
         self._build_bm25_stats()
         # P0-2：wikilink 出链图（索引过期/解析异常时退化为空图，不影响主流程）
-        self._link_graph = self._build_link_graph(exclude_dirs)
+        self._link_graph = self._build_link_graph(self.exclude_dirs)
+
+    # ---- P3：索引过期检测 ---------------------------------------------------
+    def check_freshness(self) -> FreshnessReport:
+        """索引指纹与文件系统三向比对（实测 188 篇 ~11 ms）。
+
+        changed：索引内文档与磁盘内容不一致（mtime+size 快路径 + 内容哈希决胜）
+        deleted：索引内有、磁盘上已删（幽灵文档，read_doc 会 FileNotFoundError）
+        added  ：磁盘上有带 frontmatter 的 .md 不在索引内（新文档对召回不可见；
+                 只对索引外文件读头部验 frontmatter，与 gen_index.collect 同规则，
+                 无 frontmatter 的 vendored 文件不算 added）
+
+        旧版索引（schema < 1.1，无指纹字段）→ unknown=True：无法判定，
+        重建索引后即启用检测。
+        """
+        has_fp = any("mtime_ns" in d for d in self.docs)
+        changed: list[str] = []
+        deleted: list[str] = []
+        if has_fp:
+            for d in self.docs:
+                # category-index.md 是 gen_index 在 collect 之后写盘的派生产物，
+                # 重建索引后必然与磁盘状态有差异（首跑假 added / 复跑假 changed），
+                # 且其内容由同一份 collect 结果决定——豁免，不算过期信号。
+                if d.get("kind") == "generated-index":
+                    continue
+                full = os.path.join(self.root, d["path"])
+                try:
+                    st = os.stat(full)
+                except OSError:
+                    deleted.append(d["path"])
+                    continue
+                if (st.st_mtime_ns == d.get("mtime_ns")
+                        and st.st_size == d.get("size")):
+                    continue  # 快路径：指纹完全一致
+                # 慢路径：内容哈希决胜。git checkout/pull 恢复内容会刷新 mtime
+                # （size 不变）——只看 mtime 会把「内容其实没变」误报成已修改，
+                # 常态工作流下这是主要假阳性来源。
+                try:
+                    with open(full, encoding="utf-8") as f:
+                        h = content_hash(f.read())
+                except (OSError, UnicodeDecodeError):
+                    changed.append(d["path"])  # 读不出来按已修改处理
+                    continue
+                if h != d.get("content_hash"):
+                    changed.append(d["path"])
+        added: list[str] = []
+        for dp, dns, fns in os.walk(self.root):
+            dns[:] = [x for x in dns
+                      if x not in self.exclude_dirs and not x.startswith(".")]
+            for fn in fns:
+                if not fn.endswith(".md"):
+                    continue
+                rel = os.path.relpath(os.path.join(dp, fn),
+                                      self.root).replace("\\", "/")
+                if rel in self._by_path or rel == "category-index.md":
+                    continue
+                # 索引外 .md：读头部 8 KB 验 frontmatter（完整 FM 块通常 < 1 KB）
+                try:
+                    with open(os.path.join(dp, fn), encoding="utf-8") as f:
+                        head = f.read(8192)
+                except (OSError, UnicodeDecodeError):
+                    continue
+                if FM_RE.match(head):
+                    added.append(rel)
+        return FreshnessReport(
+            stale=bool(changed or deleted or added),
+            unknown=not has_fp,
+            changed=changed, added=added, deleted=deleted)
 
     # ---- BM25 统计 --------------------------------------------------------
     def _build_bm25_stats(self) -> None:

@@ -9,9 +9,16 @@ gen_index.py — 知识库索引生成器（LlmWiki Ingest 阶段）
 套件化改造（相对个人库 scripts/_gen_query_index.py）：
   - repo / 排除集 / 索引文件名均由调用方注入（cli 层从 config 解析）。
   - 提供函数式接口 gen_index(repo, cfg)，cli 与 ingest 复用（不再 subprocess 自调）。
+
+P3 索引过期检测（2026-08-24，schema 1.0 → 1.1）：
+  - collect() 为每篇文档记录磁盘指纹 mtime_ns + size，供
+    recall.KbRetriever.check_freshness() 比对文件系统（changed/deleted/added）。
+  - 动机：索引与磁盘脱节时召回无任何感知——改内容查不到、新文档不可见、
+    删除后返回幽灵文档（read_doc 直接 FileNotFoundError）。
 依赖：仅 Python 标准库。
 """
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -19,6 +26,17 @@ import re
 from .kb_core import (
     FM_RE, parse_fm, strip_code_blocks, extract_headings, INLINE_CODE_RE,
 )
+
+# 索引 schema 版本：1.1 起新增每文档磁盘指纹（mtime_ns/size/content_hash），
+# 供 recall.KbRetriever.check_freshness() 做索引过期检测（P3）。
+# content_hash 用于 mtime 变而内容未变的场景决胜（git checkout/pull 恢复内容
+# 会刷新 mtime，只看 mtime 会产生常态假阳性）。
+SCHEMA_VERSION = "1.1"
+
+
+def content_hash(text: str) -> str:
+    """16 字节 blake2b（与 collect 读到的 utf-8 文本同口径，gen/check 一致即可）。"""
+    return hashlib.blake2b(text.encode("utf-8"), digest_size=16).hexdigest()
 
 
 def first_sentence_after(body, heading_key):
@@ -109,8 +127,13 @@ def collect(repo, exclude_dirs):
             headings = extract_headings(body)
             word_count = len(re.sub(r"\s", "", body))
             body_text, body_text_clean = body_variants(body)
+            # P3：磁盘指纹（过期检测用；collect 本就读文件，stat/哈希成本可忽略）
+            st = os.stat(full)
             documents.append({
                 "path": rel,
+                "mtime_ns": st.st_mtime_ns,
+                "size": st.st_size,
+                "content_hash": content_hash(text),
                 "basename": basename,
                 "title": title,
                 "description": make_description(fm, body, title),
@@ -139,7 +162,7 @@ def build_index(documents):
         for t in d["tags"]:
             tag_index.setdefault(t, []).append(d["path"])
     return {
-        "schema_version": "1.0",
+        "schema_version": SCHEMA_VERSION,
         "generated_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "source": os.path.basename(os.path.abspath(os.curdir)) or "knowledge-base",
         "doc_count": len(documents),

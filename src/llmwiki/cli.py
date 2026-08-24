@@ -155,6 +155,19 @@ def cmd_index(args) -> int:
     return 0
 
 
+def _warn_stale(retriever) -> None:
+    """P3：索引过期告警（结果可能过时，但不阻断查询）。"""
+    fr = getattr(retriever, "freshness", None)
+    if fr is None:
+        return
+    if fr.unknown:
+        print("[query] 注意：索引由旧版生成（无过期指纹），建议运行 llmwiki index 重建",
+              file=sys.stderr)
+    elif fr.stale:
+        print("[query] ⚠ %s；召回结果可能过时，建议运行 llmwiki index 重建"
+              % fr.summary(), file=sys.stderr)
+
+
 def cmd_query(args) -> int:
     from .assistant import KbAssistant
     repo = resolve_repo(args.repo)
@@ -171,6 +184,7 @@ def cmd_query(args) -> int:
         alias_groups=cfg.alias_groups,
         min_score_per_term=cfg.min_score_per_term,
     )
+    _warn_stale(assistant.retriever)
     if args.recall_only:
         hits = assistant.recall(args.query, top_k=args.top_k,
                                 categories=args.categories, tags=args.tags)

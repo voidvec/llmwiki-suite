@@ -97,6 +97,15 @@ def render_markdown(meta: dict, summary: dict, results: list[dict],
                  f"（min_score={meta['min_score']}, "
                  f"min_score_per_term={meta.get('min_score_per_term', '-')}）")
     lines.append(f"- 评估集：`{meta['queries_path']}`（{summary['count']} 条）")
+    fr = meta.get("index_freshness")
+    if fr:
+        if fr.get("unknown"):
+            lines.append("- 索引状态：旧版索引（无过期指纹），建议重建")
+        elif fr["stale"]:
+            lines.append(f"- ⚠ 索引过期：{fr['changed']} 改 / {fr['added']} 增 / "
+                         f"{fr['deleted']} 删（本次指标基于过期索引）")
+        else:
+            lines.append("- 索引状态：与磁盘一致（P3 指纹比对通过）")
     lines.append(f"- 召回 K = {top_k}（与生产 `build_context(max_chapters=6)` 同 K）")
     lines.append("")
     lines.append("## 汇总")
@@ -156,6 +165,11 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
     retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
                             alias_groups=cfg.alias_groups,
                             min_score_per_term=cfg.min_score_per_term)
+    # P3：对过期索引做评估会得出错误结论，先告警并把状态记入 meta
+    fr = retriever.freshness
+    if fr is not None and fr.unknown:
+        print("[eval] ⚠ 索引由旧版生成（无过期指纹），建议先运行 llmwiki index 重建",
+              file=sys.stderr)
 
     results = run_eval(retriever, queries, top_k, min_score)
     summary = summarize(results, prod_top_k)
@@ -167,7 +181,15 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         "min_score": min_score,
         "min_score_per_term": cfg.min_score_per_term,
         "retriever": retriever_desc,
+        "index_freshness": (
+            None if fr is None else
+            {"stale": fr.stale, "unknown": fr.unknown,
+             "changed": len(fr.changed), "added": len(fr.added),
+             "deleted": len(fr.deleted)}),
     }
+    if fr is not None and fr.stale:
+        print("[eval] ⚠ %s；本次指标基于过期索引，建议 llmwiki index 重建后复测"
+              % fr.summary(), file=sys.stderr)
 
     # 控制台汇总
     print(f"[eval] {summary['count']} queries, "

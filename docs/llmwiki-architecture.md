@@ -146,4 +146,7 @@ sequenceDiagram
 
 - 本套件由个人库的 `scripts/` 引擎 pip 化而来：模块一一对应（`recall.py`⇄`kb_recall.py`、`assistant.py`⇄`kb_assistant.py`、`ingest.py`⇄`_ingest_normalize.py`、`lint.py`⇄`lint_kb.py`、`gen_index.py`⇄`_gen_query_index.py`）。
 - 核心改造：**去掉 `.git` 锚定仓库根**（`REPO_DEFAULT`），改为 D3 解析链（`--repo` → CWD 向上找 `.git` → CWD 含 .md）；受控词表 / 排除目录从硬编码抽到 `llmwiki.toml` 三层配置。
-- 个人库自身以 **S3 自举**方式切为套件消费者（`pip install -e ../llmwiki-suite`），eval 基线回归（recall@4 / MRR）须与迁移前一致。
+- 个人库以 **S3 自举**方式切为套件消费者：`pip install -e ../llmwiki-suite`（已落地，2026-08-24）。
+  - 验收①召回等价：个人库 57 条评估集跑套件 `llmwiki eval`，**recall@4=100%、MRR@4=0.9605**，与迁移前 `kb_recall` 基线逐位一致（含 avg_rank 1.11、missed 空）。
+  - 验收②lint 等价：套件 `llmwiki lint`（191 文件）与本地 `lint_kb.py` 同为 0 errors / 199 warnings，逐项一致。
+  - 消费入口：个人库日常 `llmwiki query / ingest / index / lint / eval / serve` 全部由套件 CLI 提供；个人库 `scripts/` 保留为历史实现与桥接编排，不再需要双源同步（新增能力只在套件侧演化，个人库通过 `-e` 直接消费）。

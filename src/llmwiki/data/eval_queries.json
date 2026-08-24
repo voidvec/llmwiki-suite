@@ -1,219 +1,48 @@
 {
   "schema_version": "1.0",
-  "created": "2026-08-20",
-  "note": "Phase 0 评估基准（M0.1）。每条 query 的期望命中文档（expected）取自索引 documents 的真实 path，任一期望文档出现在 Top-K 即算该条命中。来源：本会话已知失败案例、方案文档示例 query、各主题域代表性 query、语义改写挑战。",
+  "created": "2026-08-24",
+  "note": "通用评估集（S2 泛化）：query 面向任意笔记库可用的通用主题，expected 全部指向「默认会进入索引」的文档（真实笔记 + 生成产物）。templates/ 默认排除，故评估集不依赖模板文件。top_k=4 与生产顶对齐（recall@4 / MRR@4）。",
   "top_k": 4,
   "queries": [
     {
-      "query": "路由与绑定做了哪些性能优化",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/03-Drogon-Web框架架构/01-router：高性能路由分发机制.md"
-      ],
-      "note": "已知失败案例：真实文档 01_Router：高性能路由分发机制 未进入 Top-3"
+      "query": "会议纪要把检索引擎换成了什么",
+      "expected": ["notes/weekly-sync.md"],
+      "note": "叙述型：从会议纪要找检索引擎选型结论"
     },
     {
-      "query": "Drogon 的事件循环是怎么实现的",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/02-Trantor网络库原理深度/01-eventloop：事件循环核心机制.md"
-      ],
-      "note": "Drogon/Trantor 主题域代表"
+      "query": "BM25 的参数怎么调",
+      "expected": ["notes/bm25-tuning-log.md"],
+      "note": "调优主题参数（K1/B、字段 boost、min_score）"
     },
     {
-      "query": "trantor 的 reactor 多线程模型",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/02-Trantor网络库原理深度/02-reactor模型：多线程事件分发策略.md"
-      ],
-      "note": "Drogon/Trantor 主题域代表"
+      "query": "nginx 反向代理在哪里讨论",
+      "expected": ["notes/messy-note-未归一.md"],
+      "note": "用词宽松，命中含 nginx 反代讨论的笔记"
     },
     {
-      "query": "Drogon ORM 怎么用",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/04-数据库与ORM系统/01-orm架构：现代c++数据库交互方案.md"
-      ],
-      "note": "Drogon ORM 主题域代表"
+      "query": "知识库分类导航在哪",
+      "expected": ["category-index.md"],
+      "note": "导航索引生成产物（实际进入索引的生成文档）"
     },
     {
-      "query": "websocket 怎么实现消息广播和聊天室",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/05-实时通信与高级应用/02-websocket实战：消息广播与聊天室.md"
-      ],
-      "note": "Drogon 实时通信主题域代表"
+      "query": "检索引擎选型会议记录",
+      "expected": ["notes/weekly-sync.md"],
+      "note": "会议纪要主题，语义改写"
     },
     {
-      "query": "Drogon 连接池与限流策略",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/04-数据库与ORM系统/09-pool：连接池管理与限流策略.md"
-      ],
-      "note": "Drogon 数据库主题域代表"
+      "query": "BM25 的停用词与字段权重",
+      "expected": ["notes/bm25-tuning-log.md"],
+      "note": "调优细节（停用词、字段 boost）"
     },
     {
-      "query": "c++20 协程底层实现",
-      "expected": [
-        "21-Guide-Tutorial/Drogon-Premium-Tutorial/06-Drogon源码深度剖析/08-coroutine：c++20协程底层实现.md"
-      ],
-      "note": "Drogon 源码剖析主题域代表"
+      "query": "服务器配置和反向代理笔记",
+      "expected": ["notes/messy-note-未归一.md"],
+      "note": "部署主题（mssy 笔记实际内容）"
     },
     {
-      "query": "Qt 多线程怎么用",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/高级特性/qt-multithreading-guide.md"
-      ],
-      "note": "Qt 主题域代表"
-    },
-    {
-      "query": "Qt 信号槽机制",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/高级特性/qt-multithreading-guide.md"
-      ],
-      "note": "无独立信号槽文档；全文出现 6 次最多者为 qt-multithreading-guide"
-    },
-    {
-      "query": "Qt 播放视频和音乐",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/多媒体/qt-mediaplayer-guide.md"
-      ],
-      "note": "Qt 多媒体主题域代表"
-    },
-    {
-      "query": "Qt SQLite 数据库怎么加密",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/数据库/qt-sqlite-encryption-guide.md"
-      ],
-      "note": "Qt 数据库主题域代表"
-    },
-    {
-      "query": "Qt 国际化 i18n 怎么做",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/高级特性/qt-i18n-guide.md"
-      ],
-      "note": "Qt 高级特性主题域代表"
-    },
-    {
-      "query": "Qt 应用性能优化有哪些手段",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/qt-performance-optimization-guide.md"
-      ],
-      "note": "标题直接匹配（qt-performance-optimization-guide）"
-    },
-    {
-      "query": "界面样式怎么美化（QSS）",
-      "expected": [
-        "05-Frameworks-And-Libraries/01-Qt-GUI-Framework/GUI组件/qt-qss-guide.md"
-      ],
-      "note": "语义改写挑战：口语化表达，标题为 Qt 样式表 (QSS) 完整指南"
-    },
-    {
-      "query": "Conan 2 和 CMake Presets 怎么配合",
-      "expected": [
-        "03-Development-Tools/01-Build-Systems/conan-cmake-presets-guide.md"
-      ],
-      "note": "构建工具主题域代表"
-    },
-    {
-      "query": "Git hooks 做代码质量检查",
-      "expected": [
-        "03-Development-Tools/03-Version-Control/git-hooks-code-quality-guide.md"
-      ],
-      "note": "版本控制主题域代表"
-    },
-    {
-      "query": "GDB 怎么调试程序",
-      "expected": [
-        "03-Development-Tools/02-Debugging-And-Profiling/gdb-debugging-guide.md"
-      ],
-      "note": "调试主题域代表"
-    },
-    {
-      "query": "Windows 上 MySQL 怎么部署",
-      "expected": [
-        "06-Database-Systems/01-Relational-DB/mysql-setup-windows-guide.md"
-      ],
-      "note": "数据库部署主题域代表"
-    },
-    {
-      "query": "数据库读写分离怎么设计",
-      "expected": [
-        "06-Database-Systems/03-ORM-and-drivers/db-read-write-separation-guide.md"
-      ],
-      "note": "数据库架构主题域代表"
-    },
-    {
-      "query": "Nginx 反向代理怎么配",
-      "expected": [
-        "07-Web-Architecture-And-Security/01-Web-Server-Reverse-Proxy/nginx-reverse-proxy-ubuntu-guide.md"
-      ],
-      "note": "Web 服务器主题域代表"
-    },
-    {
-      "query": "mTLS 双向证书怎么生成",
-      "expected": [
-        "07-Web-Architecture-And-Security/02-Auth-And-Security/openssl-mtls-guide.md",
-        "07-Web-Architecture-And-Security/02-Auth-And-Security/mtls-cert-generation-guide.md"
-      ],
-      "note": "两篇 mTLS 文档任一命中即可"
-    },
-    {
-      "query": "Web API 错误码怎么设计",
-      "expected": [
-        "07-Web-Architecture-And-Security/02-Auth-And-Security/web-api-error-system-design-guide.md"
-      ],
-      "note": "API 设计主题域代表"
-    },
-    {
-      "query": "Docker 多阶段构建怎么写",
-      "expected": [
-        "08-Cloud-DevOps-Deployment/01-Containerization/docker-multi-stage-canonical-build-guide.md"
-      ],
-      "note": "容器化主题域代表"
-    },
-    {
-      "query": "宝塔面板怎么安装",
-      "expected": [
-        "08-Cloud-DevOps-Deployment/03-Cloud-Platforms/bt-panel-setup-guide.md"
-      ],
-      "note": "云平台主题域代表"
-    },
-    {
-      "query": "分层架构怎么防止腐化",
-      "expected": [
-        "09-Software-Architecture/02-System-Design/layered-architecture-enforcement-guide.md"
-      ],
-      "note": "软件架构主题域代表"
-    },
-    {
-      "query": "知识库标签规范是什么",
-      "expected": [
-        "docs/tagging-system-guide.md"
-      ],
-      "note": "方案文档示例 query"
-    },
-    {
-      "query": "如何配置 lint 自动化",
-      "expected": [
-        "docs/llmwiki-tutorial-01-system.md"
-      ],
-      "note": "方案文档示例 query；lint 环节属 LLMWiki 教学流程（01 体系搭建）"
-    },
-    {
-      "query": "llmwiki 怎么接入微信",
-      "expected": [
-        "docs/llmwiki-tutorial-02-channel.md"
-      ],
-      "note": "渠道接入教程（原微信教程与部署指南合并后）"
-    },
-    {
-      "query": "知识库文件命名规范",
-      "expected": [
-        "docs/file-naming-conventions.md"
-      ],
-      "note": "知识库规范主题域代表"
-    },
-    {
-      "query": "WSL2 配 C++ 开发环境",
-      "expected": [
-        "03-Development-Tools/05-IDEs-And-Editors/wsl2-vscode-cpp-setup-guide.md"
-      ],
-      "note": "开发环境主题域代表"
+      "query": "索引包含了哪些文档",
+      "expected": ["category-index.md"],
+      "note": "导航索引统计信息"
     }
   ]
 }

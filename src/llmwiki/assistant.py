@@ -15,7 +15,7 @@ import json
 import os
 import urllib.request
 
-from .recall import KbRetriever
+# 注意：recall 在 _ensure_retriever 内延迟导入（惰性构造，避免 serve 初始化即读索引）
 
 PROMPT_TMPL = """你是知识库助手。仅根据以下检索到的文档片段回答用户问题。
 若片段足以回答，请直接、准确地回答并引用片段来源标题；
@@ -40,16 +40,36 @@ class KbAssistant:
                  llm_model=None, exclude_dirs=None, alias_groups=None,
                  min_score_per_term=None, link_gate=None):
         self.index_path = index_path
-        # 索引缺失会让 KbRetriever 抛错；这里延迟到首次召回时暴露，便于排查。
-        self.retriever = KbRetriever(index_path, exclude_dirs=exclude_dirs,
-                                     alias_groups=alias_groups,
-                                     min_score_per_term=min_score_per_term,
-                                     link_gate=link_gate)
+        self._exclude_dirs = exclude_dirs
+        self._alias_groups = alias_groups
+        self._min_score_per_term = min_score_per_term
+        self._link_gate = link_gate
+        # 惰性构造 KbRetriever：serve / CLI 初始化不因索引缺失崩溃；
+        # 首次召回时才读索引并暴露可读错误（见 _ensure_retriever）。
+        self._retriever = None
         self.llm_base_url = (llm_base_url or os.getenv(
             "LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
         self.llm_api_key = llm_api_key if llm_api_key is not None \
             else os.getenv("LLM_API_KEY", "")
         self.llm_model = llm_model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+
+    @property
+    def retriever(self):
+        """惰性初始化 KbRetriever（首次访问时构造）。"""
+        if self._retriever is None:
+            from .recall import KbRetriever
+            self._retriever = KbRetriever(
+                self.index_path,
+                exclude_dirs=self._exclude_dirs,
+                alias_groups=self._alias_groups,
+                min_score_per_term=self._min_score_per_term,
+                link_gate=self._link_gate,
+            )
+        return self._retriever
+
+    @retriever.setter
+    def retriever(self, r):
+        self._retriever = r
 
     # ---- LLM 调用（OpenAI 兼容 /chat/completions，标准库 urllib）----
     def call_llm(self, prompt):

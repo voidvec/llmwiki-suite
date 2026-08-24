@@ -1,19 +1,31 @@
-# llmwiki
+# llmwiki-suite
 
-把一堆 Markdown 笔记编译成「会生长、能问答」的个人知识库。
+把一堆 Markdown 笔记编成「会生长、能问答」的个人知识库。
 
 源自 Karpathy 的 LLM-wiki 思路：不做每次查询临时切片的 RAG，而是用工具链
-持续**编译**笔记——补 frontmatter、建 BM25 + wikilink 图索引、巡检断链，
+**持续编译**笔记——补 frontmatter、建 BM25 + wikilink 图索引、巡检断链，
 最后通过 CLI 或微信通道问答。
+
+> **包名 vs 命令名**：PyPI 发布名为 **`llmwiki-suite`**（`llmwiki` 已被占用），
+> 安装后命令仍然是 **`llmwiki`**。
 
 ## 安装
 
 ```bash
-pip install git+https://github.com/<you>/llmwiki-suite.git   # 核心，零依赖
-pip install "llmwiki[wechat]"                                # + 微信通道（可选）
+pip install llmwiki-suite                          # 核心，零依赖
+pip install "llmwiki-suite[wechat]"               # + 微信通道（fastapi/uvicorn）
+pip install git+https://github.com/<you>/llmwiki-suite.git   # 从 GitHub 直接装
 ```
 
 要求 Python >= 3.11。
+
+### 本地开发安装（源码）
+
+```bash
+git clone https://github.com/<you>/llmwiki-suite.git
+cd llmwiki-suite
+pip install -e .                 # 或带微信通道：pip install -e ".[wechat]"
+```
 
 ## 五步接入你已有的笔记库
 
@@ -50,7 +62,18 @@ llmwiki query "..."    # 5. 检索 / 问答
 
 ## 文档
 
-见 `docs/`：getting-started（入口）→ tutorial 01/02/03 → obsidian-guide → architecture。
+全部文档在 `docs/`，按「入口 → 进阶 → 参考」组织：
+
+| 文档 | 说明 |
+|------|------|
+| `docs/getting-started.md` | **入口**：五步接入已有笔记库（10 分钟上手） |
+| `docs/llmwiki-tutorial-01-system.md` | 体系搭建完整教程：目录规范、Ingest / Query / Lint、自动化 |
+| `docs/llmwiki-tutorial-02-channel.md` | 渠道接入：微信 / 企业微信桥接、serve 部署 |
+| `docs/llmwiki-tutorial-03-quality-tuning.md` | 检索质量调优：评估集、诊断、调参 |
+| `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
+| `docs/obsidian-guide.md` | 可选：用 Obsidian 作为前端编辑器 |
+
+建议顺序：getting-started → tutorial-01 → 02/03（按需）→ architecture。
 
 ## License
 

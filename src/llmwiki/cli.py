@@ -8,6 +8,7 @@
   llmwiki query    召回 / 问答（配置 LLM_API_KEY 后生成完整回答）
   llmwiki lint     巡检：断链 / 词表 / 命名
   llmwiki eval     评估召回质量（recall@k / MRR）
+  llmwiki serve    启动 HTTP 桥接服务（需 extras: llmwiki[wechat]）
 
 所有命令支持 `--repo <path>` 覆盖 CWD（D3 解析链：--repo → CWD 向上找 .git → 报错）。
 """
@@ -225,6 +226,20 @@ def cmd_eval(args) -> int:
     return 0
 
 
+def cmd_serve(args) -> int:
+    """启动桥接服务（需 wechat extras：fastapi + uvicorn）。"""
+    try:
+        from .channels.wechat_bridge import app
+        import uvicorn
+    except ImportError as e:
+        print(f"[serve] 缺少通道依赖: {e}\n"
+              f"       请安装: pip install \"llmwiki-suite[wechat]\"", file=sys.stderr)
+        return 1
+    print(f"[serve] LlmWiki bridge on {args.host}:{args.port}  (Ctrl+C 退出)")
+    uvicorn.run(app, host=args.host, port=args.port)
+    return 0
+
+
 # --------------------------------------------------------------------------
 # 参数装配
 # --------------------------------------------------------------------------
@@ -263,7 +278,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("query", help="召回 / 问答")
     _add_repo_arg(sp)
     sp.add_argument("query", help="查询文本")
-    sp.add_argument("--top-k", type=int, default=6)
+    sp.add_argument("--top-k", type=int, default=4)  # P5：与生产召回顶 K=4 对齐
     sp.add_argument("--recall-only", action="store_true", help="仅打印召回候选，不调 LLM")
     sp.add_argument("--categories", nargs="*", default=None)
     sp.add_argument("--tags", nargs="*", default=None)
@@ -288,6 +303,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--retriever-desc", default=None)
     sp.add_argument("--prod-top-k", type=int, default=4)
     sp.set_defaults(func=cmd_eval)
+
+    # serve
+    sp = sub.add_parser("serve", help="启动 HTTP 桥接服务（需 wechat extras）")
+    sp.add_argument("--host", default="127.0.0.1", help="监听地址（默认仅本机）")
+    sp.add_argument("--port", type=int, default=8000)
+    sp.set_defaults(func=cmd_serve)
 
     return p
 

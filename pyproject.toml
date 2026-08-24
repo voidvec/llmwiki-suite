@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llmwiki"
+name = "llmwiki-suite"
 version = "0.1.0"
 description = "LLM-compiled personal wiki toolkit: BM25 + wikilink-graph recall, lint, and chat channels over plain Markdown notes."
 readme = "README.md"
@@ -24,4 +24,14 @@ llmwiki = "llmwiki.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-llmwiki = ["data/**/*.json", "data/**/*.toml", "data/**/*.md", "data/**/*.yaml", "data/**/*.yml"]
+llmwiki = [
+    "data/**/*.json",
+    "data/**/*.toml",
+    "data/**/*.md",
+    "data/**/*.yaml",
+    "data/**/*.yml",
+    "data/scaffold/.pre-commit-config.yaml",
+]
+
+[tool.setuptools]
+include-package-data = true

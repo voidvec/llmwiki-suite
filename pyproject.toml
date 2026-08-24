@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmwiki"
+version = "0.1.0"
+description = "LLM-compiled personal wiki toolkit: BM25 + wikilink-graph recall, lint, and chat channels over plain Markdown notes."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = []  # core is intentionally zero-dependency
+
+[project.optional-dependencies]
+wechat = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+
+[project.scripts]
+llmwiki = "llmwiki.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+llmwiki = ["data/**/*.json", "data/**/*.toml", "data/**/*.md", "data/**/*.yaml", "data/**/*.yml"]

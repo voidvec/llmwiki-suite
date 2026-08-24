@@ -1,0 +1,30 @@
+name: KB Lint
+
+# 触发：夜间全量（UTC 19:00 ≈ 北京时间次日 03:00）+ 手动 + 推送含 .md 时守护
+# （绕过 pre-commit 的提交也会被拦下）
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "**/*.md"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install llmwiki
+        run: pip install git+https://github.com/<you>/llmwiki-suite.git
+      - name: Run knowledge-base lint
+        run: llmwiki lint
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kb-lint-report
+          path: lint-report.json

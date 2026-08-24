@@ -1,0 +1,16 @@
+# 知识库 lint 钩子：提交时仅校验「暂存区」.md，阻断新增断链 / FM 缺失 / 词表越界。
+# 前置：pip install llmwiki && pre-commit install
+# 说明：
+#   - 用 `language: system` 调 PATH 中的 llmwiki（pip 安装后自带 CLI）；
+#   - `pass_filenames: false` + `always_run: true`：llmwiki lint --staged 自行
+#     通过 `git diff --cached` 取暂存文件，对「只改了某个 .md 的提交」也能全量校验。
+repos:
+  - repo: local
+    hooks:
+      - id: kb-lint
+        name: kb-lint (wikilink / frontmatter / vocab)
+        entry: llmwiki lint --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        files: \.md$

@@ -27,6 +27,18 @@ P1 别名组（2026-08-24）：
 - expand_aliases() 短语级双向扩展：文档字段 blob（init 时缓存）与查询串
   都过同一函数，组内变体互相追加 → 「系统架构」←→ `architecture` 可互命中。
 - 别名组来源：defaults.DEFAULT_ALIAS_GROUPS + llmwiki.toml [aliases].groups（追加）。
+
+R1 查询长度耦合（2026-08-24）：
+- min_score 是**绝对**分数门槛，而 BM25 总分随查询词数近似线性增长 →
+  固定阈值对短查询过松、对长查询放进大量弱命中。188 篇参考库实测：
+  固定 0.15 下平均 120/188 篇过阈（阈值形同虚设）；库外主题查询
+  （如「Excel 数据透视表怎么用」）也返回 60~125 篇假命中，
+  「真无候选」判定（assistant 话术）永远不触发。
+- 修复：新增**每词阈值** min_score_per_term（默认 1.0），生效门槛 =
+  max(min_score, min_score_per_term × 查询词数)。实测真查询期望文档
+  最弱 3.60 分/词、库外主题 top1 最高 2.08 分/词 → 默认 1.0 下 57 条
+  评估集 0 损失，库外假命中降到 ≤8 篇；判别区间 [2.0, 3.0]，可用
+  llmwiki.toml [recall].min_score_per_term 上调（设 0 关闭本门槛）。
 """
 from __future__ import annotations
 
@@ -38,6 +50,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
+from . import defaults
 from .kb_core import WIKILINK_RE, build_link_index, resolve_wikilink
 
 # BM25 字段 boost（P0-1）：标题最高，标签/章节次之，正文与描述/摘要同权
@@ -142,7 +155,8 @@ class RecallHit:
 class KbRetriever:
     def __init__(self, index_path: str | os.PathLike,
                  exclude_dirs: Optional[set] = None,
-                 alias_groups: Optional[list] = None):
+                 alias_groups: Optional[list] = None,
+                 min_score_per_term: Optional[float] = None):
         with open(index_path, "r", encoding="utf-8") as f:
             self.index = json.load(f)
         self.root = os.path.dirname(os.path.abspath(index_path))
@@ -153,6 +167,11 @@ class KbRetriever:
         self._by_path = {d["path"]: d for d in self.docs}
         # P1：别名组（短语级双向扩展，文档侧与查询侧共用）
         self.alias_groups = [list(g) for g in (alias_groups or [])]
+        # R1：每词阈值（查询长度感知的相关性门槛）。None → 套件默认。
+        # 设 0 可关闭（退回纯绝对 min_score 门槛）。
+        self.min_score_per_term = (
+            defaults.DEFAULT_MIN_SCORE_PER_TERM
+            if min_score_per_term is None else float(min_score_per_term))
         # 每文档每字段的（别名扩展后）文本 blob，统计与打分共用，
         # 同时避免 _score_doc 对同一 blob 反复拼串/扩展。
         self._blobs = {
@@ -273,21 +292,30 @@ class KbRetriever:
     def recall(self, query: str, top_k: int = 5,
                categories: Optional[Iterable[str]] = None,
                tags: Optional[Iterable[str]] = None,
-               min_score: float = 0.15) -> list[RecallHit]:
+               min_score: float = 0.15,
+               min_score_per_term: Optional[float] = None) -> list[RecallHit]:
         """BM25 召回 + Wikilink 图扩展。
 
-        min_score 默认 0.15（按 BM25 量纲重定；过高会静默滤掉真实命中）。
+        min_score 默认 0.15（绝对门槛，按 BM25 量纲重定；过高会静默滤掉真实命中）。
+        min_score_per_term：R1 每词门槛（None → 用构造时的默认值），生效门槛 =
+        max(min_score, min_score_per_term × 查询词数)。BM25 总分随词数线性增长，
+        绝对门槛对长查询失效；每词门槛保证「平均每个查询词至少贡献这么多分」，
+        弱命中（只擦到 1~2 个常见词的文档）被挡在门外。设 0 可关闭。
         """
         # 查询侧同样做别名扩展（与文档侧对称）；query terms 去重（保序）
         terms = list(dict.fromkeys(tokenize(expand_aliases(query, self.alias_groups))))
         if not terms:
             return []
+        # R1：查询长度感知门槛（两道门叠加，任一可独立关闭）
+        per_term = (self.min_score_per_term
+                    if min_score_per_term is None else min_score_per_term)
+        effective_min = max(min_score, per_term * len(terms))
         cand_docs = self._candidates(categories, tags)
         cand_paths = {d["path"] for d in cand_docs}
         direct: list[RecallHit] = []
         for doc in cand_docs:
             score, mh = self._score_doc(doc, terms)
-            if score >= min_score:
+            if score >= effective_min:
                 direct.append(RecallHit(
                     path=doc["path"],
                     title=doc.get("title", doc.get("basename", "")),

@@ -169,6 +169,7 @@ def cmd_query(args) -> int:
         llm_model=cfg.llm_model,
         exclude_dirs=cfg.exclude_dirs,
         alias_groups=cfg.alias_groups,
+        min_score_per_term=cfg.min_score_per_term,
     )
     if args.recall_only:
         hits = assistant.recall(args.query, top_k=args.top_k,

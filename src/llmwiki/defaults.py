@@ -29,6 +29,14 @@ DEFAULT_LLM_MODEL = "gpt-4o-mini"
 DEFAULT_MIN_SCORE = 0.15
 DEFAULT_TOP_K = 6
 
+# R1 每词阈值（查询长度感知门槛）：生效门槛 = max(min_score, 本值 × 查询词数)。
+# BM25 总分随查询词数近似线性增长，绝对 min_score 对长查询失效（188 篇参考库
+# 实测：固定 0.15 下平均 120/188 篇过阈，库外主题查询返回 60~125 篇假命中）。
+# 实测分布：真查询期望文档最弱 3.60 分/词、库外主题 top1 最高 2.08 分/词。
+# 默认 1.0 = 保守侧（57 条评估集 0 损失）；判别区间 [2.0, 3.0]，追求更强
+# 「真无候选」判定可经 llmwiki.toml [recall].min_score_per_term 上调；设 0 关闭。
+DEFAULT_MIN_SCORE_PER_TERM = 1.0
+
 # 默认别名组（P1）：组内变体视为同义，打分时短语级**双向扩展**（追加、不改原文）。
 # 解决词法检索的中英/缩写语义失配（如查「系统架构」命不中标题为 architecture 的文档）。
 # 用户通过 llmwiki.toml 的 [aliases].groups 在此之上**追加**自定义组（见 config.py）。

@@ -37,11 +37,13 @@ class KbAssistant:
     业务语义全部在这里。"""
 
     def __init__(self, index_path, llm_base_url=None, llm_api_key=None,
-                 llm_model=None, exclude_dirs=None, alias_groups=None):
+                 llm_model=None, exclude_dirs=None, alias_groups=None,
+                 min_score_per_term=None):
         self.index_path = index_path
         # 索引缺失会让 KbRetriever 抛错；这里延迟到首次召回时暴露，便于排查。
         self.retriever = KbRetriever(index_path, exclude_dirs=exclude_dirs,
-                                     alias_groups=alias_groups)
+                                     alias_groups=alias_groups,
+                                     min_score_per_term=min_score_per_term)
         self.llm_base_url = (llm_base_url or os.getenv(
             "LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
         self.llm_api_key = llm_api_key if llm_api_key is not None \

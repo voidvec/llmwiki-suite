@@ -12,6 +12,7 @@
   - [ingest].extra_exclude：在默认排除集之上**追加**
   - [categories].allowed：**整体替换**默认词表（避免合并歧义；lint 对过短词表给 warning）
   - [aliases].groups：在默认别名组之上**追加**（组内变体打分时双向扩展，见 recall.expand_aliases）
+  - [recall].min_score_per_term：标量覆盖（R1 每词阈值，0 = 关闭查询长度门槛）
 """
 from __future__ import annotations
 
@@ -83,6 +84,8 @@ class Config:
     # 别名组（P1）：套件默认 + toml 追加（extend 语义）
     alias_groups: list = field(
         default_factory=lambda: [list(g) for g in defaults.DEFAULT_ALIAS_GROUPS])
+    # R1 每词阈值（查询长度感知门槛，见 recall.py 模块 docstring）
+    min_score_per_term: float = defaults.DEFAULT_MIN_SCORE_PER_TERM
     # 词表来源（lint 用：来自 toml 显式配置 / 索引派生 / 套件默认）
     categories_source: str = "default"  # "toml" | "index" | "default"
 
@@ -129,6 +132,11 @@ def load_config(repo: Path) -> Config:
             if isinstance(g, list) and len(g) >= 2 \
                     and all(isinstance(v, str) and v.strip() for v in g):
                 cfg.alias_groups.append([v.strip() for v in g])
+
+    # [recall].min_score_per_term：R1 每词阈值（标量覆盖；0 = 关闭查询长度门槛）
+    mspt = data.get("recall", {}).get("min_score_per_term")
+    if isinstance(mspt, (int, float)) and not isinstance(mspt, bool):
+        cfg.min_score_per_term = float(mspt)
 
     # [llm]：非密钥项（LLM_API_KEY 只走环境变量）
     llm = data.get("llm", {})

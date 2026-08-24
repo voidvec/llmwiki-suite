@@ -93,7 +93,9 @@ def render_markdown(meta: dict, summary: dict, results: list[dict],
     lines.append("# 召回评估报告")
     lines.append("")
     lines.append(f"- 生成时间：{meta['generated_at']}")
-    lines.append(f"- 检索器：`{meta['retriever']}`（min_score={meta['min_score']}）")
+    lines.append(f"- 检索器：`{meta['retriever']}`"
+                 f"（min_score={meta['min_score']}, "
+                 f"min_score_per_term={meta.get('min_score_per_term', '-')}）")
     lines.append(f"- 评估集：`{meta['queries_path']}`（{summary['count']} 条）")
     lines.append(f"- 召回 K = {top_k}（与生产 `build_context(max_chapters=6)` 同 K）")
     lines.append("")
@@ -152,7 +154,8 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
     queries = load_queries(queries_path)
     top_k = top_k or int(queries.get("top_k", 6))
     retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
-                            alias_groups=cfg.alias_groups)
+                            alias_groups=cfg.alias_groups,
+                            min_score_per_term=cfg.min_score_per_term)
 
     results = run_eval(retriever, queries, top_k, min_score)
     summary = summarize(results, prod_top_k)
@@ -162,6 +165,7 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         "queries_path": queries_path,
         "top_k": top_k,
         "min_score": min_score,
+        "min_score_per_term": cfg.min_score_per_term,
         "retriever": retriever_desc,
     }
 
@@ -199,6 +203,8 @@ def main(argv=None):
                     help="评估集路径（默认: <repo>/eval_queries.json，回退包内置示例集）")
     ap.add_argument("--top-k", type=int, default=None)
     ap.add_argument("--min-score", type=float, default=0.15)
+    ap.add_argument("--min-score-per-term", type=float, default=None,
+                    help="R1 每词阈值（默认: 套件/llmwiki.toml 配置值）")
     ap.add_argument("--out-dir", default=None)
     ap.add_argument("--tag", default=None)
     ap.add_argument("--retriever-desc", default=None)
@@ -207,6 +213,8 @@ def main(argv=None):
 
     repo = resolve_repo(args.repo)
     cfg = load_config(repo)
+    if args.min_score_per_term is not None:
+        cfg.min_score_per_term = args.min_score_per_term
     run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
                  min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
                  retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k)

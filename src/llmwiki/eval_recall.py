@@ -151,7 +151,8 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
 
     queries = load_queries(queries_path)
     top_k = top_k or int(queries.get("top_k", 6))
-    retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs)
+    retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
+                            alias_groups=cfg.alias_groups)
 
     results = run_eval(retriever, queries, top_k, min_score)
     summary = summarize(results, prod_top_k)

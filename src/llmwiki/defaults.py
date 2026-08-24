@@ -28,3 +28,15 @@ DEFAULT_LLM_MODEL = "gpt-4o-mini"
 # 检索参数默认值（与个人库调优后的生产值一致，见 docs/tutorial-03）
 DEFAULT_MIN_SCORE = 0.15
 DEFAULT_TOP_K = 6
+
+# 默认别名组（P1）：组内变体视为同义，打分时短语级**双向扩展**（追加、不改原文）。
+# 解决词法检索的中英/缩写语义失配（如查「系统架构」命不中标题为 architecture 的文档）。
+# 用户通过 llmwiki.toml 的 [aliases].groups 在此之上**追加**自定义组（见 config.py）。
+# 原则：只放高频通用组，宁缺勿滥——组内变体会互相注入文档 token，过泛会稀释 idf 判别力。
+DEFAULT_ALIAS_GROUPS = [
+    ["kubernetes", "k8s"],
+    ["end-to-end", "e2e", "端到端"],
+    ["系统架构", "architecture"],
+    ["可观测性", "observability"],
+    ["反向代理", "reverse-proxy"],
+]

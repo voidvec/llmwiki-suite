@@ -40,6 +40,14 @@ extra_exclude = []
 # 注意：「导航索引」为生成产物 category-index.md 专用，自定义词表时请保留
 allowed = ["知识库规范", "软件架构", "会议纪要", "读书笔记", "工具指南", "参考手册", "导航索引"]
 
+[aliases]
+# 别名组（追加语义，在套件默认组之上扩展）：组内变体打分时双向扩展，
+# 用于中英/缩写互查（如查「系统架构」命中标题为 architecture 的文档）。
+# groups = [
+#     ["反向代理", "nginx"],
+#     ["消息队列", "mq", "message-queue"],
+# ]
+
 [llm]
 # 非密钥项；LLM_API_KEY 只走环境变量
 model = "gpt-4o-mini"
@@ -160,6 +168,7 @@ def cmd_query(args) -> int:
         llm_base_url=cfg.llm_base_url,
         llm_model=cfg.llm_model,
         exclude_dirs=cfg.exclude_dirs,
+        alias_groups=cfg.alias_groups,
     )
     if args.recall_only:
         hits = assistant.recall(args.query, top_k=args.top_k,

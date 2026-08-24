@@ -11,6 +11,7 @@
   - 逐 key 覆盖（标量项：index_file / llm.model / llm.base_url ...）
   - [ingest].extra_exclude：在默认排除集之上**追加**
   - [categories].allowed：**整体替换**默认词表（避免合并歧义；lint 对过短词表给 warning）
+  - [aliases].groups：在默认别名组之上**追加**（组内变体打分时双向扩展，见 recall.expand_aliases）
 """
 from __future__ import annotations
 
@@ -79,6 +80,9 @@ class Config:
         default_factory=lambda: list(defaults.DEFAULT_CATEGORIES))
     llm_base_url: str = defaults.DEFAULT_LLM_BASE_URL
     llm_model: str = defaults.DEFAULT_LLM_MODEL
+    # 别名组（P1）：套件默认 + toml 追加（extend 语义）
+    alias_groups: list = field(
+        default_factory=lambda: [list(g) for g in defaults.DEFAULT_ALIAS_GROUPS])
     # 词表来源（lint 用：来自 toml 显式配置 / 索引派生 / 套件默认）
     categories_source: str = "default"  # "toml" | "index" | "default"
 
@@ -117,6 +121,14 @@ def load_config(repo: Path) -> Config:
     if isinstance(allowed, list) and allowed:
         cfg.categories_allowed = [str(c) for c in allowed]
         cfg.categories_source = "toml"
+
+    # [aliases].groups：追加语义（在套件默认别名组之上扩展自定义组）
+    groups = data.get("aliases", {}).get("groups", [])
+    if isinstance(groups, list):
+        for g in groups:
+            if isinstance(g, list) and len(g) >= 2 \
+                    and all(isinstance(v, str) and v.strip() for v in g):
+                cfg.alias_groups.append([v.strip() for v in g])
 
     # [llm]：非密钥项（LLM_API_KEY 只走环境变量）
     llm = data.get("llm", {})

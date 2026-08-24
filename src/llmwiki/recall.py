@@ -22,6 +22,11 @@ P0 方案落地（docs/llmwiki-tutorial-03-quality-tuning.md）：
 套件化改造（相对个人库 scripts/kb_recall.py）：
   - 移除 REPO_DEFAULT 依赖：wikilink 出链图的库根 = 索引文件所在目录
     （索引在库根生成，self.root 即库根），对 KbRetriever 调用方零新增参数。
+
+P1 别名组（2026-08-24）：
+- expand_aliases() 短语级双向扩展：文档字段 blob（init 时缓存）与查询串
+  都过同一函数，组内变体互相追加 → 「系统架构」←→ `architecture` 可互命中。
+- 别名组来源：defaults.DEFAULT_ALIAS_GROUPS + llmwiki.toml [aliases].groups（追加）。
 """
 from __future__ import annotations
 
@@ -88,6 +93,40 @@ def tokenize(text: str, cjk_stop: bool = True) -> list[str]:
     return tokens
 
 
+# ---- 别名扩展（P1） --------------------------------------------------------
+_ASCII_VARIANT = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+
+def _contains_variant(low_text: str, variant: str) -> bool:
+    """变体命中检测：ASCII 变体用词边界（防 `e2e` 误命中 `abc2efoo`）；
+    中文变体无词边界概念，用子串（`系统架构` 命中 `整体系统架构总览`）。"""
+    if _ASCII_VARIANT.match(variant):
+        return re.search(r"(?<![a-z0-9])" + re.escape(variant)
+                         + r"(?![a-z0-9])", low_text) is not None
+    return variant in low_text
+
+
+def expand_aliases(text: str, groups: list) -> str:
+    """短语级**双向**别名扩展：text（原文即可，内部自 lower）含组内任一
+    变体 → 把其余变体**追加**到文末（不改写原文，原有 token 全保留）。
+
+    文档侧与查询侧都过本函数 → 双向可命中：
+      查「系统架构」←→ 标题只写 `architecture` 的文档。
+    """
+    if not groups or not text:
+        return text
+    low = text.lower()
+    extra: list[str] = []
+    for group in groups:
+        if len(group) < 2:
+            continue
+        hit = next((v for v in group if _contains_variant(low, v)), None)
+        if hit:
+            extra.extend(v for v in group if v != hit
+                         and not _contains_variant(low, v))
+    return text + " " + " ".join(extra) if extra else text
+
+
 @dataclass
 class RecallHit:
     path: str
@@ -102,7 +141,8 @@ class RecallHit:
 
 class KbRetriever:
     def __init__(self, index_path: str | os.PathLike,
-                 exclude_dirs: Optional[set] = None):
+                 exclude_dirs: Optional[set] = None,
+                 alias_groups: Optional[list] = None):
         with open(index_path, "r", encoding="utf-8") as f:
             self.index = json.load(f)
         self.root = os.path.dirname(os.path.abspath(index_path))
@@ -111,6 +151,18 @@ class KbRetriever:
         self.tag_index = self.index.get("tag_index", {})
         # path -> doc 快速查表
         self._by_path = {d["path"]: d for d in self.docs}
+        # P1：别名组（短语级双向扩展，文档侧与查询侧共用）
+        self.alias_groups = [list(g) for g in (alias_groups or [])]
+        # 每文档每字段的（别名扩展后）文本 blob，统计与打分共用，
+        # 同时避免 _score_doc 对同一 blob 反复拼串/扩展。
+        self._blobs = {
+            d["path"]: {
+                f: expand_aliases(" ".join(_as_list(d.get(f, ""))),
+                                  self.alias_groups)
+                for f in FIELD_BOOST
+            }
+            for d in self.docs
+        }
         # P0-1：BM25 统计（df / N / avgdl）预计算一次
         self._build_bm25_stats()
         # P0-2：wikilink 出链图（索引过期/解析异常时退化为空图，不影响主流程）
@@ -120,13 +172,14 @@ class KbRetriever:
     def _build_bm25_stats(self) -> None:
         """df 按文档级统计（term 出现在任一字段即计入该文档）；
         avgdl **按字段**统计（_bm25 归一的是单字段 dl，口径必须一致）。
+        统计口径与打分一致：都基于别名扩展后的字段 blob。
         """
         df: dict[str, int] = defaultdict(int)
         field_len: dict[str, int] = defaultdict(int)
         for d in self.docs:
             seen: set[str] = set()
             for f in FIELD_BOOST:
-                toks = tokenize(" ".join(_as_list(d.get(f, ""))))
+                toks = tokenize(self._blobs[d["path"]][f])
                 field_len[f] += len(toks)
                 for t in set(toks):
                     if t not in seen:
@@ -198,8 +251,9 @@ class KbRetriever:
     def _score_doc(self, doc: dict, terms: list[str]) -> tuple[float, list[str]]:
         matched_headings: set[str] = set()
         score = 0.0
+        blobs = self._blobs[doc["path"]]  # 已做别名扩展的字段 blob（缓存）
         for f, boost in FIELD_BOOST.items():
-            blob = " ".join(_as_list(doc.get(f, "")))
+            blob = blobs[f]
             for term in terms:
                 s = self._bm25(blob, term, f) * boost
                 score += s
@@ -210,8 +264,7 @@ class KbRetriever:
                             matched_headings.add(h)
         # 门槛式覆盖度。coverage≥0.34 满分 1.0；否则下限 0.7
         matched = sum(1 for t in terms
-                      if any(t in (" ".join(_as_list(doc.get(f, "")))).lower()
-                             for f in FIELD_BOOST))
+                      if any(t in blobs[f].lower() for f in FIELD_BOOST))
         coverage = matched / len(terms) if terms else 0.0
         factor = 1.0 if coverage >= 0.34 else 0.7
         return score * factor, list(matched_headings)
@@ -225,7 +278,8 @@ class KbRetriever:
 
         min_score 默认 0.15（按 BM25 量纲重定；过高会静默滤掉真实命中）。
         """
-        terms = list(dict.fromkeys(tokenize(query)))  # query terms 去重（保序）
+        # 查询侧同样做别名扩展（与文档侧对称）；query terms 去重（保序）
+        terms = list(dict.fromkeys(tokenize(expand_aliases(query, self.alias_groups))))
         if not terms:
             return []
         cand_docs = self._candidates(categories, tags)

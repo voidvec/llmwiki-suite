@@ -183,6 +183,7 @@ def cmd_query(args) -> int:
         exclude_dirs=cfg.exclude_dirs,
         alias_groups=cfg.alias_groups,
         min_score_per_term=cfg.min_score_per_term,
+        link_gate=cfg.link_gate,
     )
     _warn_stale(assistant.retriever)
     if args.recall_only:

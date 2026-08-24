@@ -37,6 +37,14 @@ DEFAULT_TOP_K = 6
 # 「真无候选」判定可经 llmwiki.toml [recall].min_score_per_term 上调；设 0 关闭。
 DEFAULT_MIN_SCORE_PER_TERM = 1.0
 
+# P4 via_link 补位门槛：link 图扩展命中的文档，自身 BM25 分须达到
+# 生效门槛（max(min_score, 每词阈值 × 查询词数)）× 本值才允许补位。
+# 背景：补位取 max(自身分, link_boost)，此前完全绕过 R1 门槛——评估集实测
+# 342 命中中 3 条纯靠 boost 抬入的噪声（自身分 0.38 分/词，与查询无关）；
+# 0 条期望文档依赖补位进入 top6（设门槛 0 损失）。判别带：噪声 < 0.5 分/词
+# < 期望文档最弱 0.7 分/词（覆盖度压制后）。设 0 关闭（恢复旧补位行为）。
+DEFAULT_LINK_GATE = 0.5
+
 # 默认别名组（P1）：组内变体视为同义，打分时短语级**双向扩展**（追加、不改原文）。
 # 解决词法检索的中英/缩写语义失配（如查「系统架构」命不中标题为 architecture 的文档）。
 # 用户通过 llmwiki.toml 的 [aliases].groups 在此之上**追加**自定义组（见 config.py）。

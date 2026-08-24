@@ -164,7 +164,8 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
     top_k = top_k or int(queries.get("top_k", 6))
     retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
                             alias_groups=cfg.alias_groups,
-                            min_score_per_term=cfg.min_score_per_term)
+                            min_score_per_term=cfg.min_score_per_term,
+                            link_gate=cfg.link_gate)
     # P3：对过期索引做评估会得出错误结论，先告警并把状态记入 meta
     fr = retriever.freshness
     if fr is not None and fr.unknown:
@@ -180,6 +181,7 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         "top_k": top_k,
         "min_score": min_score,
         "min_score_per_term": cfg.min_score_per_term,
+        "link_gate": cfg.link_gate,
         "retriever": retriever_desc,
         "index_freshness": (
             None if fr is None else

@@ -13,6 +13,7 @@
   - [categories].allowed：**整体替换**默认词表（避免合并歧义；lint 对过短词表给 warning）
   - [aliases].groups：在默认别名组之上**追加**（组内变体打分时双向扩展，见 recall.expand_aliases）
   - [recall].min_score_per_term：标量覆盖（R1 每词阈值，0 = 关闭查询长度门槛）
+  - [recall].link_gate：标量覆盖（P4 via_link 补位门槛系数，0 = 关闭）
 """
 from __future__ import annotations
 
@@ -86,6 +87,8 @@ class Config:
         default_factory=lambda: [list(g) for g in defaults.DEFAULT_ALIAS_GROUPS])
     # R1 每词阈值（查询长度感知门槛，见 recall.py 模块 docstring）
     min_score_per_term: float = defaults.DEFAULT_MIN_SCORE_PER_TERM
+    # P4 via_link 补位门槛（补位文档自身分须达生效门槛 × 此系数；0 = 关闭）
+    link_gate: float = defaults.DEFAULT_LINK_GATE
     # 词表来源（lint 用：来自 toml 显式配置 / 索引派生 / 套件默认）
     categories_source: str = "default"  # "toml" | "index" | "default"
 
@@ -137,6 +140,11 @@ def load_config(repo: Path) -> Config:
     mspt = data.get("recall", {}).get("min_score_per_term")
     if isinstance(mspt, (int, float)) and not isinstance(mspt, bool):
         cfg.min_score_per_term = float(mspt)
+
+    # [recall].link_gate：P4 补位门槛系数（0 = 关闭，恢复旧补位行为）
+    lg = data.get("recall", {}).get("link_gate")
+    if isinstance(lg, (int, float)) and not isinstance(lg, bool):
+        cfg.link_gate = float(lg)
 
     # [llm]：非密钥项（LLM_API_KEY 只走环境变量）
     llm = data.get("llm", {})

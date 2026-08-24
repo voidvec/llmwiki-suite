@@ -69,6 +69,15 @@ P3 索引过期检测（2026-08-24）：
   init 默认执行一次并存 self.freshness（check_stale=False 可关）；
   长驻进程（如 wechat_bridge）可按请求调用 check_freshness() 复查。
   旧版索引（无指纹字段）→ unknown=True，建议重建后启用检测。
+
+P4 via_link 补位门槛（2026-08-24）：
+- link 图扩展的补位文档取 max(自身 BM25 分, link_boost)，此前完全绕过 R1
+  门槛：只要 direct 非空，弱文档即可沿出链补入 top_k。实测评估集 342 命中
+  中 3 条纯靠 boost 抬入的噪声（自身分 0.38 分/词，与查询主题无关）；
+  R1 后 direct=0 时扩展本就不触发，库外「补满 top_k」已消除，残留即此类。
+- 修复：补位文档自身分须 ≥ 生效门槛 × link_gate（默认 0.5，设 0 关闭）。
+  判别带：噪声 < 0.5 分/词 < 期望文档最弱 0.7 分/词（覆盖度压制后）；
+  评估集 0 条期望文档依赖补位（57 条 0 损失）。
 """
 from __future__ import annotations
 
@@ -222,6 +231,7 @@ class KbRetriever:
                  exclude_dirs: Optional[set] = None,
                  alias_groups: Optional[list] = None,
                  min_score_per_term: Optional[float] = None,
+                 link_gate: Optional[float] = None,
                  check_stale: bool = True):
         with open(index_path, "r", encoding="utf-8") as f:
             self.index = json.load(f)
@@ -247,6 +257,11 @@ class KbRetriever:
         self.min_score_per_term = (
             defaults.DEFAULT_MIN_SCORE_PER_TERM
             if min_score_per_term is None else float(min_score_per_term))
+        # P4：via_link 补位门槛（补位文档自身分须达生效门槛 × 此系数）。
+        # None → 套件默认；设 0 可关闭（恢复旧补位行为）。
+        self.link_gate = (
+            defaults.DEFAULT_LINK_GATE
+            if link_gate is None else float(link_gate))
         # 每文档每字段的（别名扩展后）文本 blob，统计与打分共用，
         # 同时避免 _score_doc 对同一 blob 反复拼串/扩展。
         self._blobs = {
@@ -508,6 +523,10 @@ class KbRetriever:
             for rel, lb in extended.items():
                 doc = self._by_path[rel]
                 own_score, _ = self._score_doc(doc, terms)
+                # P4：补位文档自身分也须过（放宽的）门槛——boost 只能抬排序，
+                # 不能把与查询无关的弱文档硬塞进结果集（设 0 关闭本门槛）。
+                if self.link_gate > 0 and own_score < effective_min * self.link_gate:
+                    continue
                 direct.append(RecallHit(
                     path=rel,
                     title=doc.get("title", doc.get("basename", "")),

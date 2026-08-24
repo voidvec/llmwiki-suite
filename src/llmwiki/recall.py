@@ -39,6 +39,15 @@ R1 查询长度耦合（2026-08-24）：
   最弱 3.60 分/词、库外主题 top1 最高 2.08 分/词 → 默认 1.0 下 57 条
   评估集 0 损失，库外假命中降到 ≤8 篇；判别区间 [2.0, 3.0]，可用
   llmwiki.toml [recall].min_score_per_term 上调（设 0 关闭本门槛）。
+
+R2 覆盖度阶跃平滑（2026-08-24）：
+- 旧版 factor = 1.0 if coverage >= 0.34 else 0.7 是硬阶跃：cov 0.33→0.34
+  分数跳变 ~43%。实测 55.5% 的 (query,doc) 打分对落在 0<cov<0.34 阶跃带内
+  （高危区 [0.25,0.34) 1634 对）；评估集真实受害者：「系统架构」查询的
+  期望文档 cov=0.33 被 ×0.7 压到门槛下，只能靠 via_link 补位救回（脆弱路径）。
+- 修复：线性 ramp，锚点不变（cov=0 → 0.7 下限，cov≥0.34 → 1.0 满分），
+  区间内平滑过渡。57 条评估集：期望文档转直接命中（link 补位不再必需），
+  其余 56 条 0 退化；对库外查询的压制语义保留（低覆盖仍被压向 0.7）。
 """
 from __future__ import annotations
 
@@ -66,6 +75,11 @@ FIELD_BOOST = {
 
 # BM25 参数（P0-1：K1=1.5, B=0.75，经典默认）
 K1, B = 1.5, 0.75
+
+# 覆盖度平滑参数（R2）：cov=0 → COVERAGE_FLOOR，cov ≥ COVERAGE_FULL → 1.0，
+# 区间内线性过渡（端点与旧硬阶跃一致，消除边界 ~43% 的分数跳变）
+COVERAGE_FULL = 0.34
+COVERAGE_FLOOR = 0.7
 
 _CJK = re.compile(r"[一-鿿]")
 
@@ -281,11 +295,14 @@ class KbRetriever:
                     for h in doc.get("headings", []):
                         if term in h.lower():
                             matched_headings.add(h)
-        # 门槛式覆盖度。coverage≥0.34 满分 1.0；否则下限 0.7
+        # R2 覆盖度平滑 ramp（替代旧硬阶跃 1.0 if cov>=0.34 else 0.7）：
+        # cov=0 → 0.7（保留低覆盖压制，不砍到 0.5），cov≥0.34 → 1.0（满分），
+        # 区间内线性过渡——边界处不再出现 ~43% 的分数跳变与排名翻转。
         matched = sum(1 for t in terms
                       if any(t in blobs[f].lower() for f in FIELD_BOOST))
         coverage = matched / len(terms) if terms else 0.0
-        factor = 1.0 if coverage >= 0.34 else 0.7
+        factor = COVERAGE_FLOOR + (1.0 - COVERAGE_FLOOR) * min(
+            coverage / COVERAGE_FULL, 1.0)
         return score * factor, list(matched_headings)
 
     # ---- 对外召回接口 -----------------------------------------------------

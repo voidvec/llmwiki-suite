@@ -13,6 +13,12 @@ P0 方案落地（docs/llmwiki-tutorial-03-quality-tuning.md）：
 - P0-3：正文索引 `body_text`（仅剥代码块、保留 inline code）参与 BM25。
 - min_score 默认 0.15（按 BM25 量纲重定）。
 
+正确性修复（2026-08-24，扩充评估集 57 条回归把关）：
+- tokenize 不再去重：去重曾使 tf 恒 ≤1、K1 饱和调节失效；query terms 与
+  df 统计改为调用方自行去重。
+- avgdl 按字段统计：原实现把 7 字段 token 总加总除以 N，却用它归一单字段
+  的 dl，长短字段的归一化口径互相失真。
+
 套件化改造（相对个人库 scripts/kb_recall.py）：
   - 移除 REPO_DEFAULT 依赖：wikilink 出链图的库根 = 索引文件所在目录
     （索引在库根生成，self.root 即库根），对 KbRetriever 调用方零新增参数。
@@ -62,6 +68,8 @@ def tokenize(text: str, cjk_stop: bool = True) -> list[str]:
     """中英文混合分词：英文按词；中文滑 2-gram；丢弃含停用字的 gram。
 
     BM25 检索与 df/avgdl 统计共用本函数，保证打分口径一致。
+    注意：**保留重复 token**（词频是 BM25 的 tf 输入）；
+    需要去重的调用方（如 query terms、df 统计）自行 set()/dict.fromkeys()。
     """
     text = (text or "").lower()
     tokens: list[str] = []
@@ -77,14 +85,7 @@ def tokenize(text: str, cjk_stop: bool = True) -> list[str]:
             tokens.extend(grams)
         else:
             tokens.append(chunk)
-    # 去重但保留顺序
-    seen: set[str] = set()
-    out: list[str] = []
-    for t in tokens:
-        if t and t not in seen:
-            seen.add(t)
-            out.append(t)
-    return out
+    return tokens
 
 
 @dataclass
@@ -117,30 +118,37 @@ class KbRetriever:
 
     # ---- BM25 统计 --------------------------------------------------------
     def _build_bm25_stats(self) -> None:
+        """df 按文档级统计（term 出现在任一字段即计入该文档）；
+        avgdl **按字段**统计（_bm25 归一的是单字段 dl，口径必须一致）。
+        """
         df: dict[str, int] = defaultdict(int)
-        total = 0
+        field_len: dict[str, int] = defaultdict(int)
         for d in self.docs:
             seen: set[str] = set()
             for f in FIELD_BOOST:
                 toks = tokenize(" ".join(_as_list(d.get(f, ""))))
-                total += len(toks)
+                field_len[f] += len(toks)
                 for t in set(toks):
                     if t not in seen:
                         df[t] += 1
                         seen.add(t)
+        n = len(self.docs)
         self._df = df
-        self._N = len(self.docs)
-        self._avgdl = (total / len(self.docs)) if self.docs else 0.0
+        self._N = n
+        # 每字段平均长度；空字段兜底 1.0 避免 dl/avgdl 除零
+        self._avgdl = {f: (field_len[f] / n if n else 0.0) or 1.0
+                       for f in FIELD_BOOST}
 
-    def _bm25(self, text: str, term: str) -> float:
+    def _bm25(self, text: str, term: str, field: str = "body_text") -> float:
         toks = tokenize(text)
         tf = toks.count(term)
         if tf == 0:
             return 0.0
         dl = len(toks)
+        avgdl = self._avgdl.get(field) or 1.0
         idf = math.log((self._N - self._df.get(term, 0) + 0.5)
                        / (self._df.get(term, 0) + 0.5) + 1)
-        return idf * (tf * (K1 + 1)) / (tf + K1 * (1 - B + B * dl / self._avgdl))
+        return idf * (tf * (K1 + 1)) / (tf + K1 * (1 - B + B * dl / avgdl))
 
     # ---- Wikilink 出链图（P0-2） -------------------------------------------
     def _build_link_graph(self, exclude_dirs: Optional[set]) -> dict[str, set[str]]:
@@ -193,7 +201,7 @@ class KbRetriever:
         for f, boost in FIELD_BOOST.items():
             blob = " ".join(_as_list(doc.get(f, "")))
             for term in terms:
-                s = self._bm25(blob, term) * boost
+                s = self._bm25(blob, term, f) * boost
                 score += s
                 # 记录命中的章节（仅 headings 字段用于章节级检索）
                 if f == "headings" and s > 0:
@@ -217,7 +225,7 @@ class KbRetriever:
 
         min_score 默认 0.15（按 BM25 量纲重定；过高会静默滤掉真实命中）。
         """
-        terms = tokenize(query)
+        terms = list(dict.fromkeys(tokenize(query)))  # query terms 去重（保序）
         if not terms:
             return []
         cand_docs = self._candidates(categories, tags)

@@ -286,7 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--out-dir", default=None)
     sp.add_argument("--tag", default=None)
     sp.add_argument("--retriever-desc", default=None)
-    sp.add_argument("--prod-top-k", type=int, default=3)
+    sp.add_argument("--prod-top-k", type=int, default=4)
     sp.set_defaults(func=cmd_eval)
 
     return p

@@ -76,7 +76,7 @@ class KbAssistant:
         return data["choices"][0]["message"]["content"]
 
     # ---- 上下文拼装：章节级取数，省 token ----
-    def build_context(self, hits, max_chapters=6):
+    def build_context(self, hits, max_chapters=4):
         parts = []
         for h in hits[:max_chapters]:
             if h.matched_headings:
@@ -87,9 +87,9 @@ class KbAssistant:
         return "\n\n".join(parts)
 
     # ---- 对外：召回 + 生成 ----
-    def answer(self, query, top_k=5, categories=None, tags=None):
+    def answer(self, query, top_k=4, categories=None, tags=None):
         hits = self.retriever.recall(query, top_k=top_k,
-                                     categories=categories or None, tags=tags or None)
+            categories=categories or None, tags=tags or None)
         if not hits:
             return "知识库中未找到相关信息。", []
         context = self.build_context(hits)
@@ -99,6 +99,6 @@ class KbAssistant:
         return answer, candidates
 
     # ---- 对外：仅召回（调试用）----
-    def recall(self, query, top_k=5, categories=None, tags=None):
+    def recall(self, query, top_k=4, categories=None, tags=None):
         return self.retriever.recall(query, top_k=top_k,
                                      categories=categories or None, tags=tags or None)

@@ -470,7 +470,7 @@ class KbRetriever:
         return score * factor, list(matched_headings)
 
     # ---- 对外召回接口 -----------------------------------------------------
-    def recall(self, query: str, top_k: int = 5,
+    def recall(self, query: str, top_k: int = 4,
                categories: Optional[Iterable[str]] = None,
                tags: Optional[Iterable[str]] = None,
                min_score: float = 0.15,

@@ -69,7 +69,7 @@ def run_eval(retriever: KbRetriever, queries: dict, top_k: int,
     return out
 
 
-def summarize(results: list[dict], prod_top_k: int = 3) -> dict:
+def summarize(results: list[dict], prod_top_k: int = 4) -> dict:
     n = len(results)
     hits = [r for r in results if r["hit"]]
     hits_in_prod = [r for r in results if r["hit"] and r["rank"] <= prod_top_k]
@@ -106,7 +106,7 @@ def render_markdown(meta: dict, summary: dict, results: list[dict],
                          f"{fr['deleted']} 删（本次指标基于过期索引）")
         else:
             lines.append("- 索引状态：与磁盘一致（P3 指纹比对通过）")
-    lines.append(f"- 召回 K = {top_k}（与生产 `build_context(max_chapters=6)` 同 K）")
+    lines.append(f"- 召回 K = {top_k}（与生产 `build_context(max_chapters=4)` 同 K）")
     lines.append("")
     lines.append("## 汇总")
     lines.append("")
@@ -152,7 +152,7 @@ def render_markdown(meta: dict, summary: dict, results: list[dict],
 
 
 def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
-                 out_dir=None, tag=None, retriever_desc=None, prod_top_k=3):
+                 out_dir=None, tag=None, retriever_desc=None, prod_top_k=4):
     repo = str(cfg.repo)
     queries_path = queries_path or os.path.join(repo, "eval_queries.json")
     if not os.path.isfile(queries_path):
@@ -161,7 +161,7 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
     retriever_desc = retriever_desc or "llmwiki.recall.KbRetriever (BM25 + body_text + wikilink graph)"
 
     queries = load_queries(queries_path)
-    top_k = top_k or int(queries.get("top_k", 6))
+    top_k = top_k or int(queries.get("top_k", 4))
     retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
                             alias_groups=cfg.alias_groups,
                             min_score_per_term=cfg.min_score_per_term,
@@ -232,7 +232,7 @@ def main(argv=None):
     ap.add_argument("--out-dir", default=None)
     ap.add_argument("--tag", default=None)
     ap.add_argument("--retriever-desc", default=None)
-    ap.add_argument("--prod-top-k", type=int, default=3)
+    ap.add_argument("--prod-top-k", type=int, default=4)
     args = ap.parse_args(argv)
 
     repo = resolve_repo(args.repo)

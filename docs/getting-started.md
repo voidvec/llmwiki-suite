@@ -21,15 +21,25 @@ version: "1.0"
 
 ## 第 0 步：安装
 
+> 当前发布状态：**套件尚未推送到 PyPI**（核名已确认 `llmwiki-suite` 可发布，待正式发布）。
+> 因此其他电脑/用户的接入，从 GitHub 直装即可：可装最新 main，且升级即 `pip install --upgrade`（或带 `@<commit/tag>` 锁版本）。
+
 ```bash
-# 核心（零依赖，纯标准库）
-pip install llmwiki-suite
+# 核心（零依赖，纯标准库）—— 从 GitHub 直装（main 分支最新）
+pip install "llmwiki-suite @ git+https://github.com/lucaswang420/llmwiki-suite.git"
+
+# 锁定某个已验证版本（推荐给远端用户）：直接安装某个 commit 的源码
+pip install "git+https://github.com/lucaswang420/llmwiki-suite.git@88c7cd4"
 
 # 需要微信/企业微信通道时（额外装 fastapi + uvicorn）
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[wechat] @ git+https://github.com/lucaswang420/llmwiki-suite.git"
 ```
 
 要求 Python ≥ 3.11（内置 `tomllib` 的下限）。安装后命令是 **`llmwiki`**（注意：包名是 `llmwiki-suite`，PyPI 上 `llmwiki` 已被其他项目占用）。
+
+> **Windows 注意事项**：不要用 `git+file:///D:/...` 本地盘符直装——pip 会把盘符转小写导致 Git 无法解析（已知平台缺陷）。必须走 `git+https://` 或先 `git clone` 再 `pip install .`。
+
+若仓库公开，别的电脑无需账号直接可装；若日后改为私有，远端需先配置 GitHub 认证（`gh auth login` 或 SSH key，并用 `git+ssh://git@github.com/lucaswang420/llmwiki-suite.git`）。
 
 验证：
 
@@ -90,7 +100,7 @@ llmwiki lint
 ## 第 4 步（可选）：接入微信 / 企业微信
 
 ```bash
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[wechat] @ git+https://github.com/lucaswang420/llmwiki-suite.git"
 cd ~/mykb
 export LLM_API_KEY="sk-xxx"    # 建议；不设则降级预览
 export BRIDGE_TOKEN="my-secret"# 建议：保护 /chat /recall
@@ -100,6 +110,40 @@ llmwiki serve --host 127.0.0.1 --port 8000
 - 浏览器打开 `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定个人微信 bot；
 - 之后在微信里直接给 bot 发文本，即查即答。
 - 企业微信、LLM 厂商切换、排错等详见 [[llmwiki-tutorial-02-channel]]。
+
+---
+
+## 在另一台电脑 / 别人的机器上接入（远端消费方）
+
+> 适用：新机器、同事/朋友的知识库，与第 0～4 步完全一致的 CLI，唯一差异在**安装来源**。
+
+```bash
+# 1. 环境
+python -m venv .venv && source .venv/bin/activate    # Linux/macOS
+# 或 Windows: python -m venv .venv; .venv\Scripts\activate
+pip install "llmwiki-suite @ git+https://github.com/lucaswang420/llmwiki-suite.git"
+
+# 2. 进入他们已有的笔记目录（git 仓库或裸目录均可）
+cd ~/their-notes
+llmwiki init          # 生成 llmwiki.toml + 拷脚手架（已有不覆盖）
+llmwiki ingest        # 先 dry-run 预览，再 --apply 真正写入
+llmwiki index         # 建 kb-index.json
+llmwiki query "随便问"   # 检索/问答
+llmwiki lint          # 健康巡检
+llmwiki serve         # 要跑 HTTP 服务时（需 [wechat] extras）
+```
+
+要点：
+
+| 事项 | 说明 |
+|------|------|
+| **任意数量/任意位置** | 套件是「指向库」的 CLI，不是绑死库路径；`--repo <path>` 可切换到任何库，或 `cd` 进库直接用 |
+| **Python ≥ 3.11** | 唯一硬依赖（内置 `tomllib`） |
+| **配置不落地** | `llmwiki.toml` 随库走；密钥只读环境变量，绝不写进笔记仓库 |
+| **私有仓库反向依赖** | 套件公开可直装；若套件仓库设为私有，远端需配认证（SSH key / `gh auth login`）后改用 `git+ssh://`，或为机器单独签发只读 token |
+| **CI/pre-commit** | `llmwiki init` 拷入的 `.github/workflows/kb-lint.yml` 与 `.pre-commit-config.yaml` 已内置上游安装命令，双端（新建/既有仓库）共用 |
+| **其它库迁移历史** | 别的库没有 `_deprecated/` 那些旧引擎，无需迁移；**不存在「必须带旧文件才能跑」** |
+| **升级** | 改完套件跑 `pip install --upgrade "llmwiki-suite @ git+https://..."` 即升级到最新 main |
 
 ---
 

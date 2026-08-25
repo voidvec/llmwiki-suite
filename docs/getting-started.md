@@ -21,29 +21,21 @@ version: "1.0"
 
 ## 第 0 步：安装
 
-> 当前发布状态：**套件尚未推送到 PyPI**（核名已确认 `llmwiki-suite` 可发布，待正式发布）。
-> 因此其他电脑/用户的接入，从 GitHub 直装即可：可装最新 main，且升级即 `pip install --upgrade`（或带 `@<commit/tag>` 锁版本）。
+> 当前发布状态：**套件已发布到 PyPI**（`llmwiki-suite 0.1.0`）。
+> **推荐直接装带微信渠道的版本**——一条命令包含核心 + fastapi/uvicorn，后续接个人微信/企业微信无需再装。
 
 ```bash
-# 二选一（不必两条都装）：
-#   - 只用 query/lint/eval 等核心 → 装下面第 1 条；
-#   - 要跑微信/企业微信渠道 → 装第 3 条（[wechat]，已含核心 + fastapi/uvicorn）。
+# 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道）
+pip install "llmwiki-suite[wechat]"
 
-# 1) 核心（零依赖，纯标准库）—— 从 GitHub 直装（main 分支最新）
-pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
-
-# 2) 锁定某个已验证版本（推荐给远端用户）：直接安装某个 commit 的源码
-pip install "git+https://github.com/voidvec/llmwiki-suite.git@7be91c9"
-
-# 3) 需要微信/企业微信通道时（额外装 fastapi + uvicorn）【必须显式写 [wechat]】
-pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
+# 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
+# pip install llmwiki-suite
 ```
 
 要求 Python ≥ 3.11（内置 `tomllib` 的下限）。安装后命令是 **`llmwiki`**（注意：包名是 `llmwiki-suite`，PyPI 上 `llmwiki` 已被其他项目占用）。
 
-> **Windows 注意事项**：不要用 `git+file:///D:/...` 本地盘符直装——pip 会把盘符转小写导致 Git 无法解析（已知平台缺陷）。必须走 `git+https://` 或先 `git clone` 再 `pip install .`。
-
-若仓库公开，别的电脑无需账号直接可装；若日后改为私有，远端需先配置 GitHub 认证（`gh auth login` 或 SSH key，并用 `git+ssh://git@github.com/voidvec/llmwiki-suite.git`）。
+> **锁定已验证版本**（推荐给远端/生产）：`pip install "llmwiki-suite[wechat]==0.1.0"`。
+> 升级：`pip install -U "llmwiki-suite[wechat]"`。
 
 验证：
 
@@ -104,7 +96,7 @@ llmwiki lint
 ## 第 4 步（可选）：接入微信 / 企业微信
 
 ```bash
-pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
+pip install "llmwiki-suite[wechat]"     # 若第 0 步未带 [wechat]，这一步补装即可
 cd ~/mykb
 # 指定 LLM（OpenAI 兼容端点）。只设 key 时默认走 OpenAI gpt-4o-mini；
 # 换 DeepSeek/通义/Kimi/Ollama 等只需把 base_url + model 一起设（详见 tutorial-02 §2.1）
@@ -129,7 +121,8 @@ llmwiki serve --host 127.0.0.1 --port 8000
 # 1. 环境
 python -m venv .venv && source .venv/bin/activate    # Linux/macOS
 # 或 Windows: python -m venv .venv; .venv\Scripts\activate
-pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
+pip install "llmwiki-suite[wechat]"     # 推荐：一条装好核心 + 渠道依赖
+# 或轻量版: pip install llmwiki-suite（后续要跑 serve 再补 [wechat]）
 
 # 2. 进入他们已有的笔记目录（git 仓库或裸目录均可）
 cd ~/their-notes
@@ -138,7 +131,7 @@ llmwiki ingest        # 先 dry-run 预览，再 --apply 真正写入
 llmwiki index         # 建 kb-index.json
 llmwiki query "随便问"   # 检索/问答
 llmwiki lint          # 健康巡检
-llmwiki serve         # 要跑 HTTP 服务时（需 [wechat] extras）
+llmwiki serve         # 要跑 HTTP 服务时（已装 [wechat] 则直接可用）
 ```
 
 要点：
@@ -148,10 +141,10 @@ llmwiki serve         # 要跑 HTTP 服务时（需 [wechat] extras）
 | **任意数量/任意位置** | 套件是「指向库」的 CLI，不是绑死库路径；`--repo <path>` 可切换到任何库，或 `cd` 进库直接用 |
 | **Python ≥ 3.11** | 唯一硬依赖（内置 `tomllib`） |
 | **配置不落地** | `llmwiki.toml` 随库走；密钥只读环境变量，绝不写进笔记仓库 |
-| **私有仓库反向依赖** | 套件公开可直装；若套件仓库设为私有，远端需配认证（SSH key / `gh auth login`）后改用 `git+ssh://`，或为机器单独签发只读 token |
+| **私有仓库反向依赖** | PyPI 包公开可装（无需认证）；只有想从源码安装（`git clone` + `pip install .`）才需访问私有仓库的权限 |
 | **CI/pre-commit** | `llmwiki init` 拷入的 `.github/workflows/kb-lint.yml` 与 `.pre-commit-config.yaml` 已内置上游安装命令，双端（新建/既有仓库）共用 |
 | **其它库迁移历史** | 别的库没有 `_deprecated/` 那些旧引擎，无需迁移；**不存在「必须带旧文件才能跑」** |
-| **升级** | 改完套件跑 `pip install --upgrade "llmwiki-suite @ git+https://..."` 即升级到最新 main |
+| **升级** | 改完套件跑 `pip install -U "llmwiki-suite[wechat]"` 即升级到最新 PyPI 版 |
 
 ---
 

@@ -17,22 +17,18 @@
 ## 2. 安装套件（一条命令）
 
 ```bash
-# 二选一（不必两条都装）：
-#   - 只用 query/lint/eval 等核心 → 装第 1 条；
-#   - 要跑微信/企业微信渠道 → 装第 2 条（[wechat]，已含核心 + fastapi/uvicorn）。
+# 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道 fastapi/uvicorn）
+pip install "llmwiki-suite[wechat]"
 
-# 1) 核心（零依赖，纯标准库）—— 从 GitHub 直装 main 分支最新
-pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
-
-# 2) 需要微信/企业微信通道时（额外装 fastapi + uvicorn）【必须显式写 [wechat]】
-pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
+# 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
+# pip install llmwiki-suite
 ```
 
 - 建议在 venv 中安装：`python -m venv .venv && source .venv/bin/activate`（Windows: `.venv\Scripts\activate`）。
-- 锁定已验证版本：`pip install "git+https://github.com/voidvec/llmwiki-suite.git@<commit>"`。
-- `llmwiki-suite` 尚未推送到 PyPI；若日后发布，则可直接 `pip install llmwiki-suite`。
+- 锁定已验证版本：`pip install "llmwiki-suite[wechat]==0.1.0"`。
+- 套件已发布到 PyPI（`llmwiki-suite`），`pip` 直装即可，无需 GitHub 认证。
 
-**Windows 注意事项**：不要用 `git+file:///D:/...` 本地盘符直装——pip 会把盘符转小写导致 Git 无法解析（已知平台缺陷）。必须走 `git+https://` 或先 `git clone` 再 `pip install .`。
+> 已发布到 PyPI，正常用户 `pip install` 即可，无需 git 认证。仅当从源码安装（`git clone` + `pip install .`）时才走 git；Windows 下避免 `git+file:///D:/...` 本地盘符直装——pip 会把盘符转小写导致 Git 无法解析（已知平台缺陷）。
 
 验证：`llmwiki --help`。
 
@@ -59,7 +55,7 @@ export LLM_WIKI_MODEL="deepseek-chat"                     # 默认 gpt-4o-mini
 
 > 支持任意「OpenAI `/chat/completions` 兼容」的第三方模型：DeepSeek / Qwen（通义）/ Kimi、本地 Ollama / vLLM 等，只要 endpoint 兼容即可，详见 [[llmwiki-tutorial-02-channel]] §2.1。
 
-可选：`llmwiki lint`（健康巡检）、`llmwiki serve`（HTTP 服务，需 `[wechat]` extras）。
+可选：`llmwiki lint`（健康巡检）、`llmwiki serve`（HTTP 服务，已装 `[wechat]` 则直接可用）。
 
 所有命令支持 `--repo <path>` 显式指定库；不指定则按 `CWD 向上找 .git → CWD 含 .md` 自动定位。
 
@@ -71,8 +67,8 @@ export LLM_WIKI_MODEL="deepseek-chat"                     # 默认 gpt-4o-mini
 |------|------|
 | 同一台机器管理多个库 | `--repo <path>` 切换，或 `cd` 进对应库直接跑命令 |
 | 同事/朋友接入 | 同一条安装命令 + 上面五步，无任何「必须带旧文件」的耦合 |
-| 套件改了要升级 | `pip install --upgrade "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"` |
-| 套件仓库转私有 | 远端先配认证（`gh auth login` / SSH key），改 `git+ssh://git@github.com/voidvec/llmwiki-suite.git` |
+| 套件改了要升级 | `pip install -U "llmwiki-suite[wechat]"` |
+| 套件仓库转私有 | PyPI 包不受影响（公开索引）；若要装源码版才需配置 GitHub 认证 |
 | CI / pre-commit | `llmwiki init` 已拷入 `.github/workflows/kb-lint.yml` 与 `.pre-commit-config.yaml`（内部已内置 `pip install llmwiki-suite`） |
 
 ---

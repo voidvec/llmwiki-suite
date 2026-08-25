@@ -11,19 +11,15 @@
 
 ## 安装
 
-> 发布状态：尚未上 PyPI，以下 `pip install` 均从 GitHub 直装（`main` 分支最新）。
-> 从 GitHub 直装时，`[wechat]` extra **不会自动带上** fastapi/uvicorn，跑渠道必须显式写 `[wechat]`。
+> 已在 PyPI 发布。**推荐直接装带微信渠道的版本**（一条命令搞定核心 + 全部功能）；
+> 只看检索/巡检则装核心版即可（零依赖）。
 
 ```bash
-# 二选一，不必两条都装：
-#   只用 ingest / index / query / lint / eval（核心，零依赖）→ 装第 1 条即可
-#   要跑微信/企业微信渠道（核心 + fastapi/uvicorn）→ 装第 2 条，它已包含核心
+# 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道 fastapi/uvicorn）
+pip install "llmwiki-suite[wechat]"
 
-# ① 核心（零依赖，纯标准库）
-pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
-
-# ② 微信/企业微信通道（在核心之上额外装 fastapi + uvicorn；已含核心，无需再装①）
-pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
+# 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
+# pip install llmwiki-suite
 ```
 
 要求 Python >= 3.11。
@@ -68,8 +64,8 @@ llmwiki query "..."    # 5. 检索 / 问答
 用 `llmwiki serve` 把知识库接到微信，直接发消息问答：
 
 ```bash
-# ① 前提：必须装带 wechat extra 的包（核心安装不含 fastapi/uvicorn）
-pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
+# ① 已装渠道版则直接可用；否则先补装渠道依赖
+pip install "llmwiki-suite[wechat]"
 
 # ② 配置 LLM（OpenAI 兼容端点；只设 KEY 时默认走 OpenAI）
 export LLM_WIKI_API_KEY="sk-xxx"

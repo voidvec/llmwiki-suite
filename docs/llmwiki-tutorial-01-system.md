@@ -61,11 +61,11 @@ LLMWiki 源自 Andrej Karpathy 提出的 **「用 LLM 持续编译一份个人 w
 核心引擎零三方依赖，标准 `pip install` 即可：
 
 ```bash
-# 从 GitHub 源码安装（尚未上传 PyPI 前）
-pip install git+https://github.com/<you>/llmwiki-suite.git
-
-# 需要微信通道（附加依赖：fastapi + uvicorn）时，改用 extras
+# 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道 fastapi+uvicorn）
 pip install "llmwiki-suite[wechat]"
+
+# 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
+# pip install llmwiki-suite
 ```
 
 > 关键字提醒：包名是 **`llmwiki-suite`**（PyPI 上 `llmwiki` 已被其他项目占用），但安装后的命令仍是 `llmwiki`。

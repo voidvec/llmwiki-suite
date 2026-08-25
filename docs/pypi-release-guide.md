@@ -135,9 +135,8 @@ python -m twine upload dist/*
 ## 第 6 步：验证 + 装后自检
 
 ```bash
-pip install llmwiki-suite              # 正式通道
+pip install "llmwiki-suite[wechat]"    # 推荐：核心 + 渠道一把装好
 llmwiki --version                      # 应显示 0.1.0（注意命令是 llmwiki）
-pip install "llmwiki-suite[wechat]"    # 渠道 extras（fastapi/uvicorn）
 ```
 
 - 可以 `pip download llmwiki-suite ==0.1.0 --no-deps -d /tmp/check` 看包内结构 `data/` scaffold 是否齐全。

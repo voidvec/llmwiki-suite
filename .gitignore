@@ -15,7 +15,7 @@ testkb-remote/
 eval_reports/
 ingest-report.json
 kb-index.json
-category-index.md
+/category-index.md
 lint-report.json
 
 # IDE

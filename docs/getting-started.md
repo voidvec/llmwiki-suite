@@ -26,20 +26,20 @@ version: "1.0"
 
 ```bash
 # 核心（零依赖，纯标准库）—— 从 GitHub 直装（main 分支最新）
-pip install "llmwiki-suite @ git+https://github.com/lucaswang420/llmwiki-suite.git"
+pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
 
 # 锁定某个已验证版本（推荐给远端用户）：直接安装某个 commit 的源码
-pip install "git+https://github.com/lucaswang420/llmwiki-suite.git@88c7cd4"
+pip install "git+https://github.com/voidvec/llmwiki-suite.git@7be91c9"
 
 # 需要微信/企业微信通道时（额外装 fastapi + uvicorn）
-pip install "llmwiki-suite[wechat] @ git+https://github.com/lucaswang420/llmwiki-suite.git"
+pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 ```
 
 要求 Python ≥ 3.11（内置 `tomllib` 的下限）。安装后命令是 **`llmwiki`**（注意：包名是 `llmwiki-suite`，PyPI 上 `llmwiki` 已被其他项目占用）。
 
 > **Windows 注意事项**：不要用 `git+file:///D:/...` 本地盘符直装——pip 会把盘符转小写导致 Git 无法解析（已知平台缺陷）。必须走 `git+https://` 或先 `git clone` 再 `pip install .`。
 
-若仓库公开，别的电脑无需账号直接可装；若日后改为私有，远端需先配置 GitHub 认证（`gh auth login` 或 SSH key，并用 `git+ssh://git@github.com/lucaswang420/llmwiki-suite.git`）。
+若仓库公开，别的电脑无需账号直接可装；若日后改为私有，远端需先配置 GitHub 认证（`gh auth login` 或 SSH key，并用 `git+ssh://git@github.com/voidvec/llmwiki-suite.git`）。
 
 验证：
 
@@ -100,7 +100,7 @@ llmwiki lint
 ## 第 4 步（可选）：接入微信 / 企业微信
 
 ```bash
-pip install "llmwiki-suite[wechat] @ git+https://github.com/lucaswang420/llmwiki-suite.git"
+pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 cd ~/mykb
 export LLM_API_KEY="sk-xxx"    # 建议；不设则降级预览
 export BRIDGE_TOKEN="my-secret"# 建议：保护 /chat /recall
@@ -121,7 +121,7 @@ llmwiki serve --host 127.0.0.1 --port 8000
 # 1. 环境
 python -m venv .venv && source .venv/bin/activate    # Linux/macOS
 # 或 Windows: python -m venv .venv; .venv\Scripts\activate
-pip install "llmwiki-suite @ git+https://github.com/lucaswang420/llmwiki-suite.git"
+pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
 
 # 2. 进入他们已有的笔记目录（git 仓库或裸目录均可）
 cd ~/their-notes

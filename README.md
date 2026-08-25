@@ -1,5 +1,7 @@
 # llmwiki-suite
 
+> 🌐 [English](README.en.md) · 中文
+
 [![PyPI version](https://img.shields.io/pypi/v/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![Python](https://img.shields.io/pypi/pyversions/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml)
@@ -118,9 +120,11 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/llmwiki-tutorial-01-system.md` | 体系搭建完整教程：目录规范、Ingest / Query / Lint、自动化 |
 | `docs/llmwiki-tutorial-02-channel.md` | 渠道接入：微信 / 企业微信桥接、serve 部署 |
 | `docs/llmwiki-tutorial-03-quality-tuning.md` | 检索质量调优：评估集、诊断、调参 |
+| `docs/llmwiki-eval.md` | **命令参考**：eval 全部选项、评估集 schema、报告字段、指标解读 |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
 | `docs/obsidian-guide.md` | 可选：用 Obsidian 作为前端编辑器 |
 | `docs/pypi-release-guide.md` | 维护者：发布到 PyPI 的操作指南（注册/2FA/Token/twine） |
+| `CHANGELOG.md` | 版本变更记录（Keep a Changelog 风格） |
 
 建议顺序：getting-started → tutorial-01 → 02/03（按需）→ architecture。
 

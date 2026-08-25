@@ -1,0 +1,69 @@
+name: 🐛 Bug 报告
+description: 报告一个可复现的问题（检索/索引/CLI/渠道/安装）
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请尽量提供完整信息，能大幅加快定位。**提交前建议先跑一遍评估/巡检**：
+        ```bash
+        llmwiki lint          # 结构问题（断链/词表/命名）
+        llmwiki eval          # 检索质量问题（recall/MRR）
+        ```
+  - type: input
+    id: version
+    attributes:
+      label: 版本与环境
+      description: "运行 `llmwiki --version` 与 `python --version`，粘贴结果"
+      placeholder: "llmwiki 0.1.1 · Python 3.12.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: 涉及组件
+      description: 问题出在哪一层？
+      multiple: true
+      options:
+        - ingest（frontmatter/wikilink 规范化）
+        - index / recall（BM25 检索、索引、打分）
+        - eval（评估集、基线断言）
+        - lint（断链/词表/命名巡检）
+        - serve / 微信渠道（个人微信 / 企业微信）
+        - CLI / 安装（pip、命令解析）
+        - 文档
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 最小可复现：命令 + 输入 + 期望 vs 实际。若涉及检索，附上 query 与 `llmwiki eval` 的摘要输出
+      placeholder: |
+        1. `llmwiki ingest --apply …`
+        2. `llmwiki query "…"`
+        3. 期望：…；实际：…
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: 期望 vs 实际
+      description: 你期望发生什么，实际发生了什么
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 快照
+      description: 贴关键输出或 `eval_reports/*.json` 摘要（勿含密钥）
+      render: text
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 自查
+      options:
+        - label: 已运行 `llmwiki index` 重建索引（改文档后必须）
+        - label: 密钥只走环境变量，未贴出真实 key

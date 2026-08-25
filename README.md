@@ -2,7 +2,8 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![Python](https://img.shields.io/pypi/pyversions/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
-[![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions)
+[![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml)
+[![Release](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml)
 
 把一堆 Markdown 笔记编成「会生长、能问答」的个人知识库。
 
@@ -46,7 +47,7 @@ llmwiki index          # 4. 建检索索引
 llmwiki query "..."    # 5. 检索 / 问答
 ```
 
-可选：`llmwiki lint`（巡检断链/词表）、`llmwiki eval`（评估召回质量）、
+可选：`llmwiki lint`（巡检断链/词表）、`llmwiki eval`（评估低质量子集并输出诊断）、
 `llmwiki serve`（启动 HTTP 问答服务，需 `wechat` extras）。
 
 ## 命令一览
@@ -56,7 +57,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki init` | 在目标库生成 `llmwiki.toml` 模板 + 脚手架（.gitignore / pre-commit / CI） |
 | `llmwiki ingest` | 扫描笔记，补齐 frontmatter，规范化 wikilink 命名 |
 | `llmwiki index` | 生成 BM25 + wikilink 图检索索引（`kb-index.json`） |
-| `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后生成完整回答 |
+| `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后基于召回结果生成完整回答 |
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
 | `llmwiki eval` | 用内置评估集跑 recall@k / MRR |
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |

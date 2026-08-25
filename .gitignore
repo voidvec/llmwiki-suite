@@ -18,6 +18,9 @@ kb-index.json
 /category-index.md
 lint-report.json
 
+# pre-commit 临时评估输出
+.pre-commit-eval/
+
 # IDE
 .idea/
 .vscode/

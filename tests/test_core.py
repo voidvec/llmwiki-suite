@@ -1,13 +1,12 @@
-"""核心纯函数单元测试：tokenize / frontmatter 解析 / 仓库定位 / 配置合并。"""
+"""核心纯函数单元测试：tokenize / frontmatter 解析 / 仓库定位 / 配置合并。
 
-import os
-import sys
+运行前提：已 `pip install -e .`（或 CI 中 `pip install .`）——直接 import 已安装的
+llmwiki 包，保证「测试的就是发布的」，不注入仓库内 src 路径。
+"""
+
 from pathlib import Path
 
 import pytest
-
-# 让 tests/ 可直接 import src 下源码（无需先 pip install -e）
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from llmwiki import kb_core, recall  # noqa: E402
 

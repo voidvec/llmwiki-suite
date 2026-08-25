@@ -1,0 +1,27 @@
+# llmwiki-suite 仓库自身的 pre-commit 钩子。
+# 前置：pip install "llmwiki-suite[dev]" && pip install pre-commit && pre-commit install
+#
+# 说明：
+#   - check-yaml：校验 workflow/scaffold 等 YAML 语法——历史上 ci.yml 曾因
+#     `run: |` 块内行首 `---` 被解析器当文档分隔符导致 workflow 解析失败（run 32822093733）。
+#   - 自定义 kb-baseline：在临时副本上建索引并断言召回基线（recall>=0.95/MRR>=0.9），
+#     不改动工作区 fixtures（--out-dir 用临时目录）。改动涉及召回/索引/文档结构时自动回归。
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        args: ["--unsafe"]   # 允许顶层 on: 键被 YAML 1.1 解析为 true 的 workflow
+        exclude: "^\\.github/workflows/.*\\.ya?ml$"  # GH Actions 有自己的解析器，check-yaml 易误报
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  - repo: local
+    hooks:
+      - id: kb-recall-baseline
+        name: kb recall baseline (recall>=0.95 / MRR>=0.9)
+        entry: python scripts/check_recall_baseline.py --repo tests/fixtures/kb --build --out-dir .pre-commit-eval
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

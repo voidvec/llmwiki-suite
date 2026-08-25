@@ -8,9 +8,14 @@ fixtures/kb 用与 testkb 相同的 4 篇评估目标笔记复刻，可被包内
 - 对 tests/fixtures/kb 原地跑 ingest + index + eval（迷你库，不改动内容）；
 - check_recall_baseline.py 为独立回归入口（不经 pytest）；
 - 任何改动（分词/打分/补位/索引）跌破基线 → 红。
+
+运行前提：与 test_core.py 一致，基于**已安装的 llmwiki 包**（`pip install -e .` /
+CI `pip install .`）——子进程调用 `sys.executable -m llmwiki.cli` 与脚本，均从
+site-packages 取包，不注入仓库内 src（保证「测试的就是发布的」）。
 """
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -36,7 +41,7 @@ def eval_result(tmp_path_factory):
         "*report.json", "kb-index.json", "eval_reports", "__pycache__", ".cache"))
     kb = work / "kb"
 
-    env = {**__import__("os").environ, "PYTHONPATH": str(REPO_ROOT / "src")}
+    env = {**os.environ}  # 不注入 PYTHONPATH —— 用已安装的 llmwiki 包
     # 与 CI 相同：init 已在 fixtures 内（llmwiki.toml）——若缺则 init
     if not (kb / "llmwiki.toml").is_file():
         subprocess.run([sys.executable, "-m", "llmwiki.cli", "init", "--repo", str(kb)],

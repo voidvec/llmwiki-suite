@@ -24,6 +24,13 @@ jobs:
         run: pip install ".[wechat,dev]"
       - name: 单元测试 + 召回基线测试
         run: pytest
+      - name: 独立基线回归（不经 pytest，走安装后 CLI + fixtures 迷你库）
+        run: |
+          python scripts/check_recall_baseline.py \
+            --repo tests/fixtures/kb \
+            --build \
+            --out-dir "$RUNNER_TEMP/recall-eval" \
+            --tag ci-baseline
       - name: 构建校验
         run: |
           pip install build twine

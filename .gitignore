@@ -11,6 +11,12 @@ testkb/
 testkb-remote/
 .venv-remote/
 
+# eval / ingest 生成产物（不入库）
+eval_reports/
+ingest-report.json
+kb-index.json
+category-index.md
+lint-report.json
 
 # IDE
 .idea/

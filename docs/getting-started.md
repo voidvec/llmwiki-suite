@@ -157,6 +157,7 @@ llmwiki serve         # 要跑 HTTP 服务时（需 [wechat] extras）
 
 ## 相关文档
 
+- [[remote-onboarding]]（另一台电脑 / 别人的知识库接入：安装、五步、多库/多用户、升级与私有化）
 - [[llmwiki-tutorial-01-system]]（体系搭建完整教程：目录规范、Ingest/Query/Lint、自动化）
 - [[llmwiki-tutorial-02-channel]]（渠道接入：微信 / 企业微信）
 - [[llmwiki-tutorial-03-quality-tuning]]（检索质量调优：评估、诊断、调参）

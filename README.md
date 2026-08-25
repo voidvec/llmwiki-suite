@@ -6,15 +6,15 @@
 **持续编译**笔记——补 frontmatter、建 BM25 + wikilink 图索引、巡检断链，
 最后通过 CLI 或微信通道问答。
 
-> **包名 vs 命令名**：PyPI 发布名为 **`llmwiki-suite`**（`llmwiki` 已被占用），
-> 安装后命令仍然是 **`llmwiki`**。
+> **包名 vs 命令名**：PyPI 发布名为 **`llmwiki-suite`**（`llmwiki` 这个包名已被其他项目占用），
+> 安装后执行命令仍然是 **`llmwiki`** —— 即「装的是 `llmwiki-suite`，用的是 `llmwiki`」。
 
 ## 安装
 
 ```bash
 pip install llmwiki-suite                          # 核心，零依赖
 pip install "llmwiki-suite[wechat]"               # + 微信通道（fastapi/uvicorn）
-pip install git+https://github.com/<you>/llmwiki-suite.git   # 从 GitHub 直接装
+pip install git+https://github.com/voidvec/llmwiki-suite.git   # 从 GitHub 直接装
 ```
 
 要求 Python >= 3.11。
@@ -22,7 +22,7 @@ pip install git+https://github.com/<you>/llmwiki-suite.git   # 从 GitHub 直接
 ### 本地开发安装（源码）
 
 ```bash
-git clone https://github.com/<you>/llmwiki-suite.git
+git clone https://github.com/voidvec/llmwiki-suite.git
 cd llmwiki-suite
 pip install -e .                 # 或带微信通道：pip install -e ".[wechat]"
 ```
@@ -53,6 +53,25 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |
 
 所有命令支持 `--repo <path>` 显式指定库路径（默认取当前目录）。
+
+## 微信渠道接入（个人微信 / 企业微信）
+
+用 `llmwiki serve` 把知识库接到微信，直接发消息问答：
+
+```bash
+pip install "llmwiki-suite[wechat]"            # 装微信通道依赖（fastapi / uvicorn）
+export LLM_API_KEY="sk-xxx"                    # 可选，不设则降级为纯检索
+export BRIDGE_TOKEN="my-secret"                # 建议：保护 /chat、/recall
+llmwiki serve --host 127.0.0.1 --port 8000
+```
+
+- **个人微信（推荐，免费官方 iLink 通道）**：浏览器打开
+  `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定成功后
+  直接在微信里给 bot 发消息即查即答。
+- **企业微信**：配置 `WECOM_*` 环境变量后自动启用回调 / 主动推送通道。
+
+> 完整对接步骤、换 LLM 厂商（DeepSeek / 通义 / Kimi / 本地 Ollama）、
+> 会话持久化与排错，详见 [[llmwiki-tutorial-02-channel]]。
 
 ## 配置与密钥
 

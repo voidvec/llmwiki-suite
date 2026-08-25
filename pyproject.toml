@@ -16,6 +16,9 @@ wechat = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
 ]
+dev = [
+    "pytest>=8.0",
+]
 
 [project.scripts]
 llmwiki = "llmwiki.cli:main"
@@ -35,3 +38,7 @@ llmwiki = [
 
 [tool.setuptools]
 include-package-data = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -20,25 +20,10 @@ jobs:
           cache: pip
       - name: 安装核心
         run: pip install .
-      - name: 安装 wechat extras
-        run: pip install ".[wechat]"
-      - name: 冒烟测试（完整五步工作流）
-        run: |
-          mkdir -p /tmp/kbdemo
-          cd /tmp/kbdemo
-          llmwiki init --repo .
-          # 建一篇最小示例笔记，让 ingest/index 有内容可处理
-          mkdir -p notes
-          printf '%s\n' \
-            '---
-title: "示例：Markdown 知识库"
-tags: [demo, 测试]
----' '# 示例笔记' '' '这是一篇用于 CI 冒烟测试的示例笔记。' \
-            > notes/demo.md
-          llmwiki ingest --repo . --apply
-          llmwiki index --repo .
-          llmwiki query "示例" --repo . --recall-only
-          llmwiki lint --repo .
+      - name: 安装 wechat + dev extras
+        run: pip install ".[wechat,dev]"
+      - name: 单元测试 + 召回基线测试
+        run: pytest
       - name: 构建校验
         run: |
           pip install build twine

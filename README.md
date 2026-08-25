@@ -119,6 +119,7 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/llmwiki-tutorial-03-quality-tuning.md` | 检索质量调优：评估集、诊断、调参 |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
 | `docs/obsidian-guide.md` | 可选：用 Obsidian 作为前端编辑器 |
+| `docs/pypi-release-guide.md` | 维护者：发布到 PyPI 的操作指南（注册/2FA/Token/twine） |
 
 建议顺序：getting-started → tutorial-01 → 02/03（按需）→ architecture。
 

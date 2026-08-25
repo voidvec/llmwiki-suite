@@ -5,7 +5,7 @@
   llmwiki init     生成 llmwiki.toml 模板 + 拷脚手架（.gitignore/pre-commit/CI）
   llmwiki ingest   补 frontmatter + 规范化 wikilink（默认 dry-run）
   llmwiki index    建检索索引（BM25 + wikilink 图）
-  llmwiki query    召回 / 问答（配置 LLM_API_KEY 后生成完整回答）
+  llmwiki query    召回 / 问答（配置 LLM_WIKI_API_KEY 后生成完整回答）
   llmwiki lint     巡检：断链 / 词表 / 命名
   llmwiki eval     评估召回质量（recall@k / MRR）
   llmwiki serve    启动 HTTP 桥接服务（需 extras: llmwiki[wechat]）
@@ -50,7 +50,7 @@ allowed = ["知识库规范", "软件架构", "会议纪要", "读书笔记", "�
 # ]
 
 [llm]
-# 非密钥项；LLM_API_KEY 只走环境变量
+# 非密钥项；LLM_WIKI_API_KEY 只走环境变量
 model = "gpt-4o-mini"
 # base_url = "https://api.openai.com/v1"
 """

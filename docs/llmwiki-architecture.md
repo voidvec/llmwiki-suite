@@ -135,8 +135,8 @@ sequenceDiagram
 
 ## 4. 安全与部署边界
 
-- **网关令牌**：`/chat`、`/recall` 受 `BRIDGE_TOKEN` 保护；服务默认绑 `127.0.0.1`，仅企业微信回调经内网穿透面向公网（沿用第二次评审 R3）。
-- **凭证全部走环境变量**，绝不硬编码（WECOM_* / LLM_* / BRIDGE_TOKEN / ILINK_*）。
+- **网关令牌**：`/chat`、`/recall` 受 `LLM_WIKI_BRIDGE_TOKEN` 保护；服务默认绑 `127.0.0.1`，仅企业微信回调经内网穿透面向公网（沿用第二次评审 R3）。
+- **凭证全部走环境变量**，绝不硬编码（`LLM_WIKI_*` 前缀下：`API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*`）。
 - **iLink 无需公网**：客户端主动出网长轮询，家庭宽带即可；企业微信回调才需公网/穿透。
 - **离线可跑**：LLM 未配置时 `/chat` 降级返回检索片段预览；iLink 无 token 时后台空闲不触网。
 

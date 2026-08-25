@@ -49,7 +49,7 @@ version: "2.0"
 | 已装 llmwiki-suite | 见姊妹篇 §1.2 | `llmwiki --help` |
 | wechat extras | 桥接服务依赖 fastapi + uvicorn | `llmwiki serve --help` |
 | 知识库索引 | 已生成 `kb-index.json` | `ls kb-index.json` |
-| LLM Key（推荐） | 不设也能跑，答案降级为片段预览 | `echo $LLM_API_KEY` |
+| LLM Key（推荐） | 不设也能跑，答案降级为片段预览 | `echo $LLM_WIKI_API_KEY` |
 | iLink 平台权限 | **个人微信前提**：需有腾讯 iLink Bot API 访问权限 | 取码能返回二维码即代表有权 |
 
 > 若 `kb-index.json` 缺失，先跑 `llmwiki index` 重建。
@@ -78,39 +78,39 @@ pip install "llmwiki-suite[wechat]"
 
 | 变量 | 必填 | 默认值 | 作用 |
 |------|------|--------|------|
-| `KB_INDEX` | 否 | `<repo>/kb-index.json` | 检索索引路径（缺省时按 D3 解析：`--repo` / CWD 向上找 `.git` / CWD 有 .md） |
-| `LLM_API_KEY` | 推荐 | 空 → 降级预览 | OpenAI 兼容端点密钥 |
-| `LLM_BASE_URL` | 否 | `https://api.openai.com/v1` | 自建 / 兼容 LLM 网关 |
-| `LLM_MODEL` | 否 | `gpt-4o-mini` | 模型名 |
-| `BRIDGE_TOKEN` | 建议 | 空（开发放行） | 保护 `/chat`、`/recall` |
-| `ENABLE_ILINK` | 否 | `1`（启用） | 设 `0` 关闭个人微信通道 |
-| `WECOM_TOKEN` / `WECOM_AES_KEY` | 企业微信需 | 空 → 不启用 | 企业微信回调验签 / 加解密 |
-| `WECOM_CORPID` / `WECOM_SECRET` / `WECOM_AGENTID` | 企业微信需 | 空 | 主动推送用 |
-| `ILINK_BASE_URL` | 否 | `https://ilinkai.weixin.qq.com` | iLink 网关 |
-| `ILINK_CDN_BASE_URL` | 否 | `https://novac2c.cdn.weixin.qq.com/c2c` | 媒体 CDN |
-| `ILINK_BOT_TOKEN` | 否 | 空（走扫码） | 直接注入已有 token，跳过扫码 |
-| `ILINK_SESSION_FILE` | 否 | `.ilink_session.json` | 会话持久化（已在 .gitignore） |
+| `LLM_WIKI_KB_INDEX` | 否 | `<repo>/kb-index.json` | 检索索引路径（缺省时按 D3 解析：`--repo` / CWD 向上找 `.git` / CWD 有 .md） |
+| `LLM_WIKI_API_KEY` | 推荐 | 空 → 降级预览 | OpenAI 兼容端点密钥 |
+| `LLM_WIKI_BASE_URL` | 否 | `https://api.openai.com/v1` | 自建 / 兼容 LLM 网关 |
+| `LLM_WIKI_MODEL` | 否 | `gpt-4o-mini` | 模型名 |
+| `LLM_WIKI_BRIDGE_TOKEN` | 建议 | 空（开发放行） | 保护 `/chat`、`/recall` |
+| `LLM_WIKI_ENABLE_ILINK` | 否 | `1`（启用） | 设 `0` 关闭个人微信通道 |
+| `LLM_WIKI_WECOM_TOKEN` / `LLM_WIKI_WECOM_AES_KEY` | 企业微信需 | 空 → 不启用 | 企业微信回调验签 / 加解密 |
+| `LLM_WIKI_WECOM_CORPID` / `LLM_WIKI_WECOM_SECRET` / `LLM_WIKI_WECOM_AGENTID` | 企业微信需 | 空 | 主动推送用 |
+| `LLM_WIKI_ILINK_BASE_URL` | 否 | `https://ilinkai.weixin.qq.com` | iLink 网关 |
+| `LLM_WIKI_ILINK_CDN_BASE_URL` | 否 | `https://novac2c.cdn.weixin.qq.com/c2c` | 媒体 CDN |
+| `LLM_WIKI_ILINK_BOT_TOKEN` | 否 | 空（走扫码） | 直接注入已有 token，跳过扫码 |
+| `LLM_WIKI_ILINK_SESSION_FILE` | 否 | `.ilink_session.json` | 会话持久化（已在 .gitignore） |
 
 > 🔒 `.ilink_session.json` 已在 `.gitignore` 中，**token 不出仓库**，可放心持久化。
 
 ### 2.1 换 LLM 厂商 / 模型（协议兼容即可，不看厂商名）
 
-`LLM_API_KEY` 关键字是「推荐」；`LLM_BASE_URL` / `LLM_MODEL` 已有默认值。只用 OpenAI 时只设 key；换厂商就把三个一起设。
+`LLM_WIKI_API_KEY` 关键字是「推荐」；`LLM_WIKI_BASE_URL` / `LLM_WIKI_MODEL` 已有默认值。只用 OpenAI 时只设 key；换厂商就把三个一起设。
 
 **兼容判定**：`call_llm` 只依赖 OpenAI 兼容的 `/chat/completions`——
 
 ```bash
 # DeepSeek
-export LLM_BASE_URL="https://api.deepseek.com/v1"; export LLM_MODEL="deepseek-chat"
+export LLM_WIKI_BASE_URL="https://api.deepseek.com/v1"; export LLM_WIKI_MODEL="deepseek-chat"
 # 通义千问
-export LLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"; export LLM_MODEL="qwen-plus"
+export LLM_WIKI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"; export LLM_WIKI_MODEL="qwen-plus"
 # Kimi / Moonshot
-export LLM_BASE_URL="https://api.moonshot.cn/v1"; export LLM_MODEL="moonshot-v1-8k"
+export LLM_WIKI_BASE_URL="https://api.moonshot.cn/v1"; export LLM_WIKI_MODEL="moonshot-v1-8k"
 # 本地 Ollama（key 随便填）
-export LLM_BASE_URL="http://127.0.0.1:11434/v1"; export LLM_MODEL="qwen2.5:7b"; export LLM_API_KEY="ollama"
+export LLM_WIKI_BASE_URL="http://127.0.0.1:11434/v1"; export LLM_WIKI_MODEL="qwen2.5:7b"; export LLM_WIKI_API_KEY="ollama"
 ```
 
-### 2.2 BRIDGE_TOKEN 是什么、从哪来
+### 2.2 LLM_WIKI_BRIDGE_TOKEN 是什么、从哪来
 
 它是**你自己定义的一个网关口令**，不是平台提供。作用：保护 `/chat`、`/recall` 两个对外端点——部署用内网穿透暴露公网后，陌生人无法随便查你的知识库；设了之后必须带令牌（`?token=xxx` 或头 `X-Bridge-Token: xxx`）否则 `401`。
 
@@ -118,7 +118,7 @@ export LLM_BASE_URL="http://127.0.0.1:11434/v1"; export LLM_MODEL="qwen2.5:7b"; 
 python -c "import secrets; print(secrets.token_hex(16))"
 ```
 
-> ⚠️ **重要**：个人微信 iLink 通道**不经过**这两个受保护端点——它在后台轮询里直接调 `assistant.answer()`，**微信端发消息不受 BRIDGE_TOKEN 影响**。
+> ⚠️ **重要**：个人微信 iLink 通道**不经过**这两个受保护端点——它在后台轮询里直接调 `assistant.answer()`，**微信端发消息不受 LLM_WIKI_BRIDGE_TOKEN 影响**。
 
 ---
 
@@ -126,18 +126,18 @@ python -c "import secrets; print(secrets.token_hex(16))"
 
 ```bash
 # bash（Linux / macOS / Git Bash）
-export LLM_API_KEY="sk-xxxx"     # 不设则答案降级为片段预览
-export BRIDGE_TOKEN="my-secret"  # 建议设置，保护 /chat /recall
-export ENABLE_ILINK="1"          # 个人微信通道（默认即开）
+export LLM_WIKI_API_KEY="sk-xxxx"     # 不设则答案降级为片段预览
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"  # 建议设置，保护 /chat /recall
+export LLM_WIKI_ENABLE_ILINK="1"          # 个人微信通道（默认即开）
 cd ~/my-notes                    # 库目录（D3 解析锚点）
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
 ```powershell
 # PowerShell
-$env:LLM_API_KEY="sk-xxxx"
-$env:BRIDGE_TOKEN="my-secret"
-$env:ENABLE_ILINK="1"
+$env:LLM_WIKI_API_KEY="sk-xxxx"
+$env:LLM_WIKI_BRIDGE_TOKEN="my-secret"
+$env:LLM_WIKI_ENABLE_ILINK="1"
 cd ~/my-notes
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
@@ -236,7 +236,7 @@ curl http://127.0.0.1:8000/healthz
 
 **行为说明：**
 
-- 配了 `LLM_API_KEY` → LLM 基于检索片段生成回答；没配 → 返回「检索片段预览」。
+- 配了 `LLM_WIKI_API_KEY` → LLM 基于检索片段生成回答；没配 → 返回「检索片段预览」。
 - v1 仅支持**文本**；单条回复上限 **1800 字**。
 - 知识库无相关内容 → 回答「知识库中未找到相关信息。」（这是**预期行为**，不是故障）。
 
@@ -247,11 +247,11 @@ curl http://127.0.0.1:8000/healthz
 配置以下变量后重启即启用（**Webhook 驱动**，需公网回调）：
 
 ```bash
-export WECOM_TOKEN="xxxx"
-export WECOM_AES_KEY="xxxx"        # 43 字符 EncodingAESKey
-export WECOM_CORPID="wwxxxx"
-export WECOM_SECRET="xxxx"
-export WECOM_AGENTID="1000002"
+export LLM_WIKI_WECOM_TOKEN="xxxx"
+export LLM_WIKI_WECOM_AES_KEY="xxxx"        # 43 字符 EncodingAESKey
+export LLM_WIKI_WECOM_CORPID="wwxxxx"
+export LLM_WIKI_WECOM_SECRET="xxxx"
+export LLM_WIKI_WECOM_AGENTID="1000002"
 ```
 
 - 回调地址：`GET/POST /wechat/callback`（已实现签名校验 + XML 加解密被动回复）。
@@ -264,25 +264,25 @@ export WECOM_AGENTID="1000002"
 
 | 现象 | 排查 |
 |------|------|
-| `/healthz` 无 `ilink` | `ENABLE_ILINK` 误设 `0` |
+| `/healthz` 无 `ilink` | `LLM_WIKI_ENABLE_ILINK` 误设 `0` |
 | `/ilink/qrcode` 返回「无法获取二维码」 | 多半是**没有 iLink Bot API 平台权限** |
 | `connected` 一直 `false` | 未扫码 / 扫码后未确认 |
-| 微信发消息无回复 | ① 查服务日志 `[ilink]`；② 确认 `connected:true`；③ `LLM_API_KEY` 缺失会降级但仍有回复 |
+| 微信发消息无回复 | ① 查服务日志 `[ilink]`；② 确认 `connected:true`；③ `LLM_WIKI_API_KEY` 缺失会降级但仍有回复 |
 | 答案被截断 1800 字 | iLink 单条限制已截断；更长需分段发送 |
 | 24h 后不再回复 | 会话过期，按 §4.4 重激活 |
-| `/chat` 返回 401 | 设了 `BRIDGE_TOKEN`，请求带 `?token=xxx` 或 `X-Bridge-Token: xxx` |
+| `/chat` 返回 401 | 设了 `LLM_WIKI_BRIDGE_TOKEN`，请求带 `?token=xxx` 或 `X-Bridge-Token: xxx` |
 | 端口被占 | `llmwiki serve --port 8001` 或释放原端口 |
-| 换非 OpenAI 厂商 | 一并设 `LLM_BASE_URL` + `LLM_MODEL`；要求兼容 OpenAI `/chat/completions` |
+| 换非 OpenAI 厂商 | 一并设 `LLM_WIKI_BASE_URL` + `LLM_WIKI_MODEL`；要求兼容 OpenAI `/chat/completions` |
 | 弱图 / 不显示 | 缺 `qrcode` 库降级为链接；`pip install qrcode` 恢复 |
 
 ---
 
 ## 8. 安全注意事项
 
-- **默认绑定 `127.0.0.1`**：`/chat`、`/recall` 仅本机；内网穿透暴露务必设 `BRIDGE_TOKEN`。
+- **默认绑定 `127.0.0.1`**：`/chat`、`/recall` 仅本机；内网穿透暴露务必设 `LLM_WIKI_BRIDGE_TOKEN`。
 - **token 不出本机**：`.ilink_session.json` 已 ignore，勿手动 `git add`。
 - **iLink 走腾讯云**：非 P2P，受平台开放度与 ToS 约束，请合规使用。
-- **凭证全环境变量**，不硬编码（WECOM_* / LLM_* / BRIDGE_TOKEN / ILINK_*）。
+- **凭证全环境变量**，不硬编码（`LLM_WIKI_*` 前缀下：`API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*`）。
 
 ---
 
@@ -291,7 +291,7 @@ export WECOM_AGENTID="1000002"
 ```bash
 # 终端 1：装依赖 + 起服务
 pip install "llmwiki-suite[wechat]"
-export LLM_API_KEY="sk-xxxx"; export BRIDGE_TOKEN="my-secret"; export ENABLE_ILINK="1"
+export LLM_WIKI_API_KEY="sk-xxxx"; export LLM_WIKI_BRIDGE_TOKEN="my-secret"; export LLM_WIKI_ENABLE_ILINK="1"
 cd ~/my-notes && llmwiki serve --host 127.0.0.1 --port 8000
 
 # 终端 2：授权（浏览器打开 WebUI 扫码最省事）

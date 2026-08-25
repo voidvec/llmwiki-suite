@@ -28,6 +28,7 @@ import os
 import sys
 import urllib.request
 
+from . import _env
 from .kb_core import (
     build_link_index, split_fm, is_vendored,
     sha256_text, normalize_token,
@@ -217,7 +218,7 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
     """Ingest 主入口。返回计划文件数。"""
     repo = str(cfg.repo)
     llm_base_url = cfg.llm_base_url
-    llm_api_key = os.getenv("LLM_API_KEY", "")
+    llm_api_key = _env.getenv("API_KEY", "")
     llm_model = cfg.llm_model
 
     index = build_link_index(repo, cfg.exclude_dirs)

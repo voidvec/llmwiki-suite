@@ -47,7 +47,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki init` | 在目标库生成 `llmwiki.toml` 模板 + 脚手架（.gitignore / pre-commit / CI） |
 | `llmwiki ingest` | 扫描笔记，补齐 frontmatter，规范化 wikilink 命名 |
 | `llmwiki index` | 生成 BM25 + wikilink 图检索索引（`kb-index.json`） |
-| `llmwiki query "..."` | 召回最相关章节；配置 `LLM_API_KEY` 后生成完整回答 |
+| `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后生成完整回答 |
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
 | `llmwiki eval` | 用内置评估集跑 recall@k / MRR |
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |
@@ -60,15 +60,15 @@ llmwiki query "..."    # 5. 检索 / 问答
 
 ```bash
 pip install "llmwiki-suite[wechat]"            # 装微信通道依赖（fastapi / uvicorn）
-export LLM_API_KEY="sk-xxx"                    # 可选，不设则降级为纯检索
-export BRIDGE_TOKEN="my-secret"                # 建议：保护 /chat、/recall
+export LLM_WIKI_API_KEY="sk-xxx"               # 可选，不设则降级为纯检索
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # 建议：保护 /chat、/recall
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
 - **个人微信（推荐，免费官方 iLink 通道）**：浏览器打开
   `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定成功后
   直接在微信里给 bot 发消息即查即答。
-- **企业微信**：配置 `WECOM_*` 环境变量后自动启用回调 / 主动推送通道。
+- **企业微信**：配置 `LLM_WIKI_WECOM_*` 环境变量后自动启用回调 / 主动推送通道。
 
 > 完整对接步骤、换 LLM 厂商（DeepSeek / 通义 / Kimi / 本地 Ollama）、
 > 会话持久化与排错，详见 [[llmwiki-tutorial-02-channel]]。
@@ -76,8 +76,8 @@ llmwiki serve --host 127.0.0.1 --port 8000
 ## 配置与密钥
 
 - **库配置**：库根 `llmwiki.toml`（categories 词表、排除目录、模型名等非密钥项）
-- **密钥**：只走环境变量（`LLM_API_KEY`、`BRIDGE_TOKEN`、`WECOM_*`、`ILINK_*`），
-  本套件不读取任何 `.env` 文件
+- **密钥**：只走环境变量（`LLM_WIKI_API_KEY`、`LLM_WIKI_BRIDGE_TOKEN`、
+  `LLM_WIKI_WECOM_*`、`LLM_WIKI_ILINK_*`），本套件不读取任何 `.env` 文件
 
 ## 文档
 

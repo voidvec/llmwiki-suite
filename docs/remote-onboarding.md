@@ -42,7 +42,7 @@ llmwiki init            # 2. 生成 llmwiki.toml + 拷脚手架（.gitignore/pre
 llmwiki ingest          # 3. 先 dry-run 预览（补 frontmatter/归一/查重）
 llmwiki ingest --apply  #    确认后真正写入
 llmwiki index           # 4. 建 BM25 + wikilink 图索引 → kb-index.json
-llmwiki query "随便问"    # 5. 检索 / 问答（配 LLM_API_KEY 后生成完整回答）
+llmwiki query "随便问"    # 5. 检索 / 问答（配 LLM_WIKI_API_KEY 后生成完整回答）
 ```
 
 可选：`llmwiki lint`（健康巡检）、`llmwiki serve`（HTTP 服务，需 `[wechat]` extras）。
@@ -66,5 +66,5 @@ llmwiki query "随便问"    # 5. 检索 / 问答（配 LLM_API_KEY 后生成完
 ## 5. 3 条铁律
 
 1. **改完 .md 必重建索引**：`llmwiki index`，否则新内容不进召回。
-2. **密钥只走环境变量**：`LLM_API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*` 一律 env，套件不读 `.env`。
+2. **密钥只走环境变量**：`LLM_WIKI_API_KEY` / `LLM_WIKI_BRIDGE_TOKEN` / `LLM_WIKI_WECOM_*` / `LLM_WIKI_ILINK_*` 一律 env，套件不读 `.env`。
 3. **别建游离分类**：`categories` 必须落在 `llmwiki.toml` 词表内，否则 `lint` 报 error。

@@ -146,7 +146,7 @@ def load_config(repo: Path) -> Config:
     if isinstance(lg, (int, float)) and not isinstance(lg, bool):
         cfg.link_gate = float(lg)
 
-    # [llm]：非密钥项（LLM_API_KEY 只走环境变量）
+    # [llm]：非密钥项（LLM_WIKI_API_KEY 只走环境变量）
     llm = data.get("llm", {})
     cfg.llm_base_url = llm.get("base_url", cfg.llm_base_url)
     cfg.llm_model = llm.get("model", cfg.llm_model)

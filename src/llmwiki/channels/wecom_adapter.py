@@ -24,15 +24,16 @@ import xml.etree.ElementTree as ET
 
 from fastapi import Request, Response
 
+from .. import _env
 from .channel_base import ChannelAdapter
 
 LOG = logging.getLogger("wecom")
 
-WECOM_TOKEN = os.getenv("WECOM_TOKEN", "")
-WECOM_AES_KEY = os.getenv("WECOM_AES_KEY", "")
-WECOM_CORPID = os.getenv("WECOM_CORPID", "")
-WECOM_SECRET = os.getenv("WECOM_SECRET", "")
-WECOM_AGENTID = os.getenv("WECOM_AGENTID", "")
+WECOM_TOKEN = _env.getenv("WECOM_TOKEN", "")
+WECOM_AES_KEY = _env.getenv("WECOM_AES_KEY", "")
+WECOM_CORPID = _env.getenv("WECOM_CORPID", "")
+WECOM_SECRET = _env.getenv("WECOM_SECRET", "")
+WECOM_AGENTID = _env.getenv("WECOM_AGENTID", "")
 
 
 class WeComAdapter(ChannelAdapter):

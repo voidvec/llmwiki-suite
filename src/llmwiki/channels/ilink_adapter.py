@@ -47,6 +47,7 @@ import threading
 import urllib.request
 import urllib.parse
 
+from .. import _env
 from .channel_base import ChannelAdapter
 
 LOG = logging.getLogger("ilink")
@@ -65,10 +66,10 @@ class IlinkAdapter(ChannelAdapter):
     def __init__(self, assistant, base_url=None, cdn_base_url=None,
                  session_file=None, bot_token=None):
         super().__init__(assistant)
-        self.base_url = (base_url or os.getenv("ILINK_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
-        self.cdn_base_url = (cdn_base_url or os.getenv("ILINK_CDN_BASE_URL") or DEFAULT_CDN_BASE_URL).rstrip("/")
-        self.session_file = session_file or os.getenv("ILINK_SESSION_FILE") or ".ilink_session.json"
-        self.bot_token = bot_token or os.getenv("ILINK_BOT_TOKEN") or ""
+        self.base_url = (base_url or _env.getenv("ILINK_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+        self.cdn_base_url = (cdn_base_url or _env.getenv("ILINK_CDN_BASE_URL") or DEFAULT_CDN_BASE_URL).rstrip("/")
+        self.session_file = session_file or _env.getenv("ILINK_SESSION_FILE") or ".ilink_session.json"
+        self.bot_token = bot_token or _env.getenv("ILINK_BOT_TOKEN") or ""
         self.baseurl_override = ""
         self.login_time = 0.0
         # 运行时状态

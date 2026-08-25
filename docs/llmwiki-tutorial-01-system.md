@@ -54,7 +54,7 @@ LLMWiki 源自 Andrej Karpathy 提出的 **「用 LLM 持续编译一份个人 w
 |----|------|------|
 | Python ≥ 3.11 | tomllib 依赖的版本下限 | `python --version` |
 | git | 管理知识库版本（也是 `llmwiki` 定位仓库根的锚点） | `git --version` |
-| LLM API Key | **可选**：不设也能跑，问答降级为「检索片段预览」 | `echo $LLM_API_KEY` |
+| LLM API Key | **可选**：不设也能跑，问答降级为「检索片段预览」 | `echo $LLM_WIKI_API_KEY` |
 
 ### 1.2 安装 llmwiki-suite
 
@@ -110,7 +110,7 @@ llmwiki init      # 生成 llmwiki.toml + 拷入 .gitignore/pre-commit/CI 模板
 | `[llm] model / base_url` | 非密钥 LLM 参数 | `gpt-4o-mini` |
 | `[serve] host / port` | 桥接服务监听 | `127.0.0.1 / 8000` |
 
-> 密钥**只走环境变量**（`LLM_API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*`），套件不解析任何 `.env` 文件。
+> 密钥**只走环境变量**（`LLM_WIKI_API_KEY` / `LLM_WIKI_BRIDGE_TOKEN` / `LLM_WIKI_WECOM_*` / `LLM_WIKI_ILINK_*`），套件不解析任何 `.env` 文件。
 > 详见 `llmwiki.toml` 模板内注释与 [[llmwiki-architecture]]。
 
 ### 2.2 frontmatter 必填字段
@@ -233,7 +233,7 @@ llmwiki ingest --apply
 3. SHA256 去重检测（仅报告，**不自动删**）；
 4. 建议归类目录（**仅报告**，默认不跨目录移动）。
 
-> 配置了 `LLM_API_KEY` 时，会尝试用 LLM 推断 `categories/tags/description`，
+> 配置了 `LLM_WIKI_API_KEY` 时，会尝试用 LLM 推断 `categories/tags/description`，
 > 但推断值**必须落到受控词表**才写入，否则留空兜底；未配 key 照样离线跑通。
 
 ### 3.3 重建检索索引（Ingest 的必须尾声）
@@ -314,8 +314,8 @@ print(ans)
 print('来源:', [c['path'] for c in cands])
 ```
 
-- 配置了 `LLM_API_KEY` → 返回 LLM 基于检索片段生成的回答（简洁、引用来源标题）。
-- 未配置 → 返回「（未配置 LLM_API_KEY，以下为检索片段预览）」+ 片段开头，**离线可联调**。
+- 配置了 `LLM_WIKI_API_KEY` → 返回 LLM 基于检索片段生成的回答（简洁、引用来源标题）。
+- 未配置 → 返回「（未配置 LLM_WIKI_API_KEY，以下为检索片段预览）」+ 片段开头，**离线可联调**。
 - 知识库无相关内容 → 返回「知识库中未找到相关信息。离」
 
 ### 4.3 章节级取数（省 token）
@@ -409,7 +409,7 @@ llmwiki index                        # 顺带定时重建索引，防忘记
 | **手写时删了 `---`** | frontmatter 解析失败，文档不入索引 | 行级编辑，绝不删分隔符 |
 | **把 vendored 文件当正式文档** | 无 frontmatter 被跳过 | 正式文档务必带规范 frontmatter |
 | **以为 lychee 能查 wikilink** | 大面积假阳性 | 链接判死只交给 `llmwiki lint` |
-| **LLM 未配置以为坏了** | 实际是降级预览 | 配 `LLM_API_KEY` 即得完整回答 |
+| **LLM 未配置以为坏了** | 实际是降级预览 | 配 `LLM_WIKI_API_KEY` 即得完整回答 |
 
 ---
 
@@ -435,7 +435,7 @@ llmwiki lint
 # ⑥ 检索验证
 llmwiki query "本周例会行动项" --recall-only --top-k=4
 
-# ⑦ 问答（配了 LLM_API_KEY 即返回完整回答）
+# ⑦ 问答（配了 LLM_WIKI_API_KEY 即返回完整回答）
 llmwiki query "本周例会行动项"
 ```
 

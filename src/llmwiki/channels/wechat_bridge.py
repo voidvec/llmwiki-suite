@@ -34,6 +34,7 @@ from fastapi.responses import HTMLResponse
 
 from ..assistant import KbAssistant
 from ..config import load_config, resolve_repo
+from .. import _env
 from .ilink_adapter import IlinkAdapter
 from .wecom_adapter import WeComAdapter
 
@@ -45,7 +46,7 @@ app = FastAPI(title="LlmWiki WeChat Bridge")
 # 索引路径解析（pip 化后无 REPO_DEFAULT）：KB_INDEX 环境变量 > D3 解析链
 # （--repo / CWD 向上找 .git / CWD 含 .md）。
 def _resolve_index() -> str:
-    env = os.getenv("KB_INDEX")
+    env = _env.getenv("KB_INDEX")
     if env:
         return env
     try:
@@ -62,15 +63,15 @@ def _resolve_index() -> str:
 INDEX = _resolve_index()
 assistant = KbAssistant(INDEX)
 
-BRIDGE_TOKEN = os.getenv("BRIDGE_TOKEN", "")
+BRIDGE_TOKEN = _env.getenv("BRIDGE_TOKEN", "")
 
 # 实例化已配置的通道：
 #  - 企业微信：配置 WECOM_TOKEN + WECOM_AES_KEY 即启用（Webhook 驱动）
 #  - iLink：默认启用（ENABLE_ILINK=0 关闭）；无 token 时后台空闲，不触网
 adapters = []
-if os.getenv("WECOM_TOKEN") and os.getenv("WECOM_AES_KEY"):
+if _env.getenv("WECOM_TOKEN") and _env.getenv("WECOM_AES_KEY"):
     adapters.append(WeComAdapter(assistant))
-if os.getenv("ENABLE_ILINK", "1") != "0":
+if _env.getenv("ENABLE_ILINK", "1") != "0":
     adapters.append(IlinkAdapter(assistant))
 
 for ad in adapters:

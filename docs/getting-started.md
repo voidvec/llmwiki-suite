@@ -87,7 +87,7 @@ llmwiki query "本周例会行动项" --recall-only  # 仅看召回候选（不�
 llmwiki query "哪个文档讲 BM25" --top-k 4     # 显式控制候选数
 ```
 
-- 配了 `LLM_API_KEY`（OpenAI 兼容端点）→ 返回带来源引用的回答。
+- 配了 `LLM_WIKI_API_KEY`（OpenAI 兼容端点）→ 返回带来源引用的回答。
 - 没配 → 返回「检索片段预览」，**离线也能联调**。
 
 ```bash
@@ -102,8 +102,8 @@ llmwiki lint
 ```bash
 pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 cd ~/mykb
-export LLM_API_KEY="sk-xxx"    # 建议；不设则降级预览
-export BRIDGE_TOKEN="my-secret"# 建议：保护 /chat /recall
+export LLM_WIKI_API_KEY="sk-xxx"    # 建议；不设则降级预览
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"# 建议：保护 /chat /recall
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
@@ -150,7 +150,7 @@ llmwiki serve         # 要跑 HTTP 服务时（需 [wechat] extras）
 ## 3 条铁律（避免踩坑）
 
 1. **改文档后必重建索引**：新增 / 修改任一篇 `.md` 后跑 `llmwiki index`，否则新内容不进入召回。
-2. **密钥只走环境变量**：`LLM_API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*`，套件不读任何 `.env`。
+2. **密钥只走环境变量**：`LLM_WIKI_API_KEY` / `LLM_WIKI_BRIDGE_TOKEN` / `LLM_WIKI_WECOM_*` / `LLM_WIKI_ILINK_*`，套件不读任何 `.env`。
 3. **别乱建游离分类**：`categories` 必须落在 `llmwiki.toml` 词表内，否则 `lint` 报 error。
 
 ---

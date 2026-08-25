@@ -13,6 +13,8 @@ LLM 未配置时降级返回检索片段预览，保证离线可联调。
 """
 import json
 import os
+
+from . import _env
 import urllib.request
 
 # 注意：recall 在 _ensure_retriever 内延迟导入（惰性构造，避免 serve 初始化即读索引）
@@ -47,11 +49,11 @@ class KbAssistant:
         # 惰性构造 KbRetriever：serve / CLI 初始化不因索引缺失崩溃；
         # 首次召回时才读索引并暴露可读错误（见 _ensure_retriever）。
         self._retriever = None
-        self.llm_base_url = (llm_base_url or os.getenv(
-            "LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
+        self.llm_base_url = (llm_base_url or _env.getenv(
+            "BASE_URL", "https://api.openai.com/v1")).rstrip("/")
         self.llm_api_key = llm_api_key if llm_api_key is not None \
-            else os.getenv("LLM_API_KEY", "")
-        self.llm_model = llm_model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+            else _env.getenv("API_KEY", "")
+        self.llm_model = llm_model or _env.getenv("MODEL", "gpt-4o-mini")
 
     @property
     def retriever(self):
@@ -74,7 +76,7 @@ class KbAssistant:
     # ---- LLM 调用（OpenAI 兼容 /chat/completions，标准库 urllib）----
     def call_llm(self, prompt):
         if not self.llm_api_key:
-            return "（未配置 LLM_API_KEY，以下为检索片段预览）\n" + prompt[:600]
+            return "（未配置 LLM_WIKI_API_KEY，以下为检索片段预览）\n" + prompt[:600]
         payload = {
             "model": self.llm_model,
             "messages": [{"role": "user", "content": prompt}],

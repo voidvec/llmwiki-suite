@@ -32,7 +32,9 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload dist/*
+        # --skip-existing：避免已发布的版本号(如本地 v0.1.0 tag 触发)重复上传而失败；
+        # 新版本正常上传，已存在版本静默跳过，Release 创建不受影响。
+        run: python -m twine upload --skip-existing dist/*
 
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2

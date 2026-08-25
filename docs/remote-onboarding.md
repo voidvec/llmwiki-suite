@@ -17,10 +17,14 @@
 ## 2. 安装套件（一条命令）
 
 ```bash
-# 核心（零依赖，纯标准库）—— 从 GitHub 直装 main 分支最新
+# 二选一（不必两条都装）：
+#   - 只用 query/lint/eval 等核心 → 装第 1 条；
+#   - 要跑微信/企业微信渠道 → 装第 2 条（[wechat]，已含核心 + fastapi/uvicorn）。
+
+# 1) 核心（零依赖，纯标准库）—— 从 GitHub 直装 main 分支最新
 pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
 
-# 需要微信/企业微信通道时（额外装 fastapi + uvicorn）
+# 2) 需要微信/企业微信通道时（额外装 fastapi + uvicorn）【必须显式写 [wechat]】
 pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 ```
 
@@ -44,6 +48,16 @@ llmwiki ingest --apply  #    确认后真正写入
 llmwiki index           # 4. 建 BM25 + wikilink 图索引 → kb-index.json
 llmwiki query "随便问"    # 5. 检索 / 问答（配 LLM_WIKI_API_KEY 后生成完整回答）
 ```
+
+其中第 5 步的 LLM 通过环境变量指定（OpenAI 兼容端点，均可换）：
+
+```bash
+export LLM_WIKI_API_KEY="sk-xxx"                          # 必填（否则降级为纯检索预览）
+export LLM_WIKI_BASE_URL="https://api.deepseek.com/v1"    # 默认 https://api.openai.com/v1
+export LLM_WIKI_MODEL="deepseek-chat"                     # 默认 gpt-4o-mini
+```
+
+> 支持任意「OpenAI `/chat/completions` 兼容」的第三方模型：DeepSeek / Qwen（通义）/ Kimi、本地 Ollama / vLLM 等，只要 endpoint 兼容即可，详见 [[llmwiki-tutorial-02-channel]] §2.1。
 
 可选：`llmwiki lint`（健康巡检）、`llmwiki serve`（HTTP 服务，需 `[wechat]` extras）。
 

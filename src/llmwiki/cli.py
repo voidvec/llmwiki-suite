@@ -227,9 +227,17 @@ def cmd_eval(args) -> int:
 
 
 def cmd_serve(args) -> int:
-    """启动桥接服务（需 wechat extras：fastapi + uvicorn）。"""
+    """启动桥接服务（需 wechat extras：fastapi + uvicorn）。
+
+    注意：`pip install llmwiki-suite`（不带 extras）**不会**装入
+    fastapi/uvicorn，所以要跑微信/企业微信通道，必须安装带 wechat extra：
+        pip install "llmwiki-suite[wechat]"
+    这里采用「延迟导入」（见下方 try/except）：
+      - 没装 extras 时：命令友好报错并提示安装命令，不影响其它子命令；
+      - 已装 extras 时：正常启动服务。
+    """
     try:
-        from .channels.wechat_bridge import app
+        from .channels.wechat_bridge import app   # 延迟导入：仅 serve 时加载 fastapi 依赖
         import uvicorn
     except ImportError as e:
         print(f"[serve] 缺少通道依赖: {e}\n"

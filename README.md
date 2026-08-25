@@ -11,10 +11,19 @@
 
 ## 安装
 
+> 发布状态：尚未上 PyPI，以下 `pip install` 均从 GitHub 直装（`main` 分支最新）。
+> 从 GitHub 直装时，`[wechat]` extra **不会自动带上** fastapi/uvicorn，跑渠道必须显式写 `[wechat]`。
+
 ```bash
-pip install llmwiki-suite                          # 核心，零依赖
-pip install "llmwiki-suite[wechat]"               # + 微信通道（fastapi/uvicorn）
-pip install git+https://github.com/voidvec/llmwiki-suite.git   # 从 GitHub 直接装
+# 二选一，不必两条都装：
+#   只用 ingest / index / query / lint / eval（核心，零依赖）→ 装第 1 条即可
+#   要跑微信/企业微信渠道（核心 + fastapi/uvicorn）→ 装第 2 条，它已包含核心
+
+# ① 核心（零依赖，纯标准库）
+pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
+
+# ② 微信/企业微信通道（在核心之上额外装 fastapi + uvicorn；已含核心，无需再装①）
+pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 ```
 
 要求 Python >= 3.11。
@@ -59,8 +68,14 @@ llmwiki query "..."    # 5. 检索 / 问答
 用 `llmwiki serve` 把知识库接到微信，直接发消息问答：
 
 ```bash
-pip install "llmwiki-suite[wechat]"            # 装微信通道依赖（fastapi / uvicorn）
-export LLM_WIKI_API_KEY="sk-xxx"               # 可选，不设则降级为纯检索
+# ① 前提：必须装带 wechat extra 的包（核心安装不含 fastapi/uvicorn）
+pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
+
+# ② 配置 LLM（OpenAI 兼容端点；只设 KEY 时默认走 OpenAI）
+export LLM_WIKI_API_KEY="sk-xxx"
+export LLM_WIKI_BASE_URL="https://api.openai.com/v1"        # 不设则默认 OpenAI
+export LLM_WIKI_MODEL="gpt-4o-mini"                          # 不设则默认 gpt-4o-mini
+
 export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # 建议：保护 /chat、/recall
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
@@ -70,8 +85,21 @@ llmwiki serve --host 127.0.0.1 --port 8000
   直接在微信里给 bot 发消息即查即答。
 - **企业微信**：配置 `LLM_WIKI_WECOM_*` 环境变量后自动启用回调 / 主动推送通道。
 
-> 完整对接步骤、换 LLM 厂商（DeepSeek / 通义 / Kimi / 本地 Ollama）、
-> 会话持久化与排错，详见 [[llmwiki-tutorial-02-channel]]。
+### 换 LLM 厂商 / 模型（OpenAI 兼容协议即可）
+
+套件只调 OpenAI 兼容的 `/chat/completions`，**不看厂商名**——任何提供该协议的服务都能用：
+
+| 厂商 | `LLM_WIKI_BASE_URL` | `LLM_WIKI_MODEL` |
+|------|---------------------|------------------|
+| OpenAI（默认） | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| Kimi / Moonshot | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
+| 本地 Ollama | `http://127.0.0.1:11434/v1` | `qwen2.5:7b`（API_KEY 随便填） |
+
+> 换厂商只需把上面三个变量一起设；只有 OpenAI 时只用 `LLM_WIKI_API_KEY` 即可。
+> 支持任意 **OpenAI `/chat/completions` 兼容**的第三方服务（DeepSeek / 通义 / Kimi / 本地 Ollama / vLLM 等），
+> 完整对接步骤、会话持久化与排错，详见 [[llmwiki-tutorial-02-channel]]。
 
 ## 配置与密钥
 

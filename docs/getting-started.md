@@ -25,13 +25,17 @@ version: "1.0"
 > 因此其他电脑/用户的接入，从 GitHub 直装即可：可装最新 main，且升级即 `pip install --upgrade`（或带 `@<commit/tag>` 锁版本）。
 
 ```bash
-# 核心（零依赖，纯标准库）—— 从 GitHub 直装（main 分支最新）
+# 二选一（不必两条都装）：
+#   - 只用 query/lint/eval 等核心 → 装下面第 1 条；
+#   - 要跑微信/企业微信渠道 → 装第 3 条（[wechat]，已含核心 + fastapi/uvicorn）。
+
+# 1) 核心（零依赖，纯标准库）—— 从 GitHub 直装（main 分支最新）
 pip install "llmwiki-suite @ git+https://github.com/voidvec/llmwiki-suite.git"
 
-# 锁定某个已验证版本（推荐给远端用户）：直接安装某个 commit 的源码
+# 2) 锁定某个已验证版本（推荐给远端用户）：直接安装某个 commit 的源码
 pip install "git+https://github.com/voidvec/llmwiki-suite.git@7be91c9"
 
-# 需要微信/企业微信通道时（额外装 fastapi + uvicorn）
+# 3) 需要微信/企业微信通道时（额外装 fastapi + uvicorn）【必须显式写 [wechat]】
 pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 ```
 
@@ -102,7 +106,11 @@ llmwiki lint
 ```bash
 pip install "llmwiki-suite[wechat] @ git+https://github.com/voidvec/llmwiki-suite.git"
 cd ~/mykb
-export LLM_WIKI_API_KEY="sk-xxx"    # 建议；不设则降级预览
+# 指定 LLM（OpenAI 兼容端点）。只设 key 时默认走 OpenAI gpt-4o-mini；
+# 换 DeepSeek/通义/Kimi/Ollama 等只需把 base_url + model 一起设（详见 tutorial-02 §2.1）
+export LLM_WIKI_API_KEY="sk-xxx"        # 建议；不设则降级预览
+export LLM_WIKI_BASE_URL="https://api.openai.com/v1"   # 可选；默认 OpenAI
+export LLM_WIKI_MODEL="gpt-4o-mini"     # 可选；默认 gpt-4o-mini
 export LLM_WIKI_BRIDGE_TOKEN="my-secret"# 建议：保护 /chat /recall
 llmwiki serve --host 127.0.0.1 --port 8000
 ```

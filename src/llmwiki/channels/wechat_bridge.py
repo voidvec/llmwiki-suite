@@ -21,7 +21,11 @@ wechat_bridge.py -- LlmWiki 微信问答桥接（FastAPI 服务 + 通道编排�
   - 默认绑定 127.0.0.1；/wechat/callback 经内网穿透面向公网；
   - /chat、/recall 加 BRIDGE_TOKEN 网关令牌保护，避免隧道暴露后被任意查询知识库。
 
-依赖：fastapi + uvicorn（对外服务）；通道适配器按需再引 wecom_crypto / 标准库。
+依赖：fastapi + uvicorn（对外服务）——**必须**通过 extra 安装：
+      pip install "llmwiki-suite[wechat]"
+      （普通 `pip install llmwiki-suite` 只装核心，不含 fastapi/uvicorn；
+       本模块只被 serve / 显式 import 时加载，未装 extras 不影响其它命令）
+      通道适配器按需再引 wecom_crypto / 标准库。
 运行：uvicorn llmwiki.channels.wechat_bridge:app --host 127.0.0.1 --port 8000
        或 llmwiki serve（CLI 封装，见 llmwiki/cli.py）
 """

@@ -56,6 +56,9 @@ version: "2.0"
 
 ### 1.2 安装依赖（wechat extras）
 
+> 注意区分：`pip install llmwiki-suite`（核心）**不含** fastapi/uvicorn；
+> 跑渠道**必须**装带 extra 的包，二者是「核心 + 附加依赖」的包含关系，不是并列关系。
+
 ```bash
 # bash（Linux / macOS）
 pip install "llmwiki-suite[wechat]"

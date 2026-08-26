@@ -213,18 +213,77 @@ def cmd_lint(args) -> int:
     from .lint import run_lint
     repo = resolve_repo(args.repo)
     cfg = load_config(repo)
-    return run_lint(cfg, files=args.files, staged=args.staged, report=args.report)
+    return run_lint(cfg, files=args.files, staged=args.staged, report=args.report,
+                    sync_vocab=args.sync_vocab)
+
+
+def cmd_categories(args) -> int:
+    """categories-sync：从 kb-index 派生全部实际类别，写回 llmwiki.toml。
+
+    通用自愈入口：新增文档用新分类时，lint 不再因词表未收录而报错。
+    --apply 直接写文件；否则打印建议补丁（默认 dry-run）。
+    """
+    from .config import derive_vocab_from_index
+    repo = resolve_repo(args.repo)
+    cfg = load_config(repo)
+    toml_path = repo / "llmwiki.toml"
+    derived = derive_vocab_from_index(cfg)
+    toml_allowed = set(cfg.categories_allowed)
+    missing = sorted(derived - toml_allowed)   # 待补 = 派生词表 - 当前生效词表
+    print("[categories] 当前词表: %d 类, 索引派生词表: %d 类, 待补: %d 类"
+          % (len(toml_allowed), len(derived), len(missing)))
+    if missing:
+        print("[categories] 缺失类别: %s" % ", ".join(missing))
+        if args.apply and toml_path.is_file():
+            _write_vocab_to_toml(toml_path, missing)
+        elif args.apply:
+            print("[categories] toml 不存在，跳过写入（需先 llmwiki init）",
+                  file=sys.stderr)
+        else:
+            print("[categories] dry-run：以上为建议补入 toml 的类别。加 --apply 写入。")
+    else:
+        print("[categories] 词表已覆盖全部实际类别，无需同步。")
+    return 0
+
+
+def _write_vocab_to_toml(toml_path, new_cats) -> None:
+    """把待补类别合并进 llmwiki.toml 的 `[categories].allowed` 列表。
+
+    文本级最小改写（不依赖 tomli_w）：读原文 → 在现有 allowed 列表后追加以
+    下缺失类别 → 整行重写。找不到 allowed 行时在 [categories] 节追加一行。
+    保留全部注释与其它节格式。
+    """
+    import re as _re
+    text = toml_path.read_text(encoding="utf-8")
+    cur = []
+    m = _re.search(r'^\s*allowed\s*=\s*\[([^\]]*)\]\s*$', text, _re.M)
+    if m:
+        raw_inner = m.group(1)
+        cur = [x.strip().strip('"\'')
+               for x in raw_inner.split(",") if x.strip()]
+    merged = list(dict.fromkeys(cur + list(new_cats)))
+    rendered = 'allowed = ["%s"]' % '", "'.join(merged)
+    if m:
+        text = _re.sub(r'^\s*allowed\s*=\s*\[[^\]]*\]\s*$',
+                       rendered, text, count=1, flags=_re.M)
+    elif _re.search(r'^\[categories\]\s*$', text, _re.M):
+        text = _re.sub(r'^(\[categories\]\s*)$', r'\1' + rendered + "\n",
+                       text, count=1, flags=_re.M)
+    else:
+        text += "\n[categories]\n" + rendered + "\n"
+    toml_path.write_text(text, encoding="utf-8")
+    print("[categories] 已写入 %s 的 [categories].allowed（%d 类）"
+          % (toml_path, len(merged)))
 
 
 def cmd_eval(args) -> int:
     from .eval_recall import run_eval_cmd
     repo = resolve_repo(args.repo)
     cfg = load_config(repo)
-    run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
-                 min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
-                 retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k,
-                 chart=args.chart)
-    return 0
+    return run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
+                        min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
+                        retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k,
+                        chart=args.chart)
 
 
 def cmd_serve(args) -> int:
@@ -299,7 +358,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--staged", action="store_true", help="仅检查 git 暂存区 .md")
     sp.add_argument("files", nargs="*", help="指定文件（相对于库根）")
     sp.add_argument("--report", default=None)
+    sp.add_argument("--sync-vocab", action="store_true",
+                    help="自动把索引派生词表并入 toml 词表（自愈 categories 漏收）")
     sp.set_defaults(func=cmd_lint)
+
+    # categories-sync
+    sp = sub.add_parser("categories-sync",
+                        help="从 kb-index 派生全部实际类别并写回 llmwiki.toml")
+    _add_repo_arg(sp)
+    sp.add_argument("--apply", action="store_true",
+                    help="写入 toml（默认 dry-run 仅预览建议）")
+    sp.set_defaults(func=cmd_categories)
 
     # eval
     sp = sub.add_parser("eval", help="评估召回质量（recall@k / MRR）")

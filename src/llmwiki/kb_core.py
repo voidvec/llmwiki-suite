@@ -133,11 +133,44 @@ def _rel_no_ext(rel):
 
 
 def gh_slug(s):
-    """GitHub/Obsidian 风格的锚点 slug：小写；删除全角/半角标点（含 `：` 直接丢弃，
-    而非转连字符）；空白压成 `-`。用于 `#anchor` 与章节标题的一致性比对。"""
+    """GitHub/Obsidian 风格的锚点 slug：小写；删除全角/半角标点（含 `：` 直接剔除，
+    而非转标点；`/`、`+`、`.` 等同理删除）；空白压成 `-`。用于 `#anchor`
+    与章节标题的一致性比对。"""
     s = (s or "").strip().lower()
-    s = re.sub(r"[：:，。、！？（）()\[\]{}'\"/\\.,;]", "", s)
+    s = re.sub(r"[：:，。、！？（）()\[\]{}'\"/\\.,;+＊*]", "", s)
     s = re.sub(r"\s+", "-", s)
+    return s.strip("-")
+
+
+# emoji / 装饰字符（标题常用 📖🔧📑⚠️ 等前缀；不参与锚点比对）
+_DECOR_RE = re.compile(
+    "["
+    "\U0001F000-\U0001FAFF"  # Emoji 扩展
+    "\U00002600-\U000027BF"   # 杂项符号（☑✦✖…）
+    "\U00002300-\U000023FF"   # 杂项技术符号（⏰⏱⏳…）
+    "\U0001F1E6-\U0001F1FF"   # 区域指示符
+    "\uFE0F\u200D\u200B"      # 变体选择/零宽连接
+    "]"
+)
+
+
+def anchor_slug(s):
+    """锚点宽松 slug：gh_slug 基础上再剥离 emoji 装饰与「数字序号前缀」
+    （`1.`/`1、`/`1-`/`3.1 配置` → `配置`；`步骤 3：`/`Step 4` → 剩余正文），
+    并折叠中间 `.`/`-`/空格为 `-`，用于「链接内 `#1-概述` ↔ 标题 `## 1. 📖 概述`」
+    「链接 `#2-生成-github-pat` ↔ 标题 `步骤 1：生成 GitHub PAT`」这类常见书写差异的容错比对。"""
+    s = (s or "").strip().lower()
+    s = _DECOR_RE.sub("", s)
+    s = re.sub(r"^#{1,6}\s*", "", s)          # 剥 Markdown 标题语法（## 1. 概述 → 1. 概述）
+    # 中文/英文序号前缀（三种形态，数字可在「序数词后」或「序数词前」）：
+    # ① 第 N 步/章/节：数字在后  ② 步骤/章节 N：数字在前  ③ Step/Part N：英文序数
+    s = re.sub(r"^第\s*[一二三四五六七八九十百\d]+\s*[步章节][：:]?\s*", "", s)
+    s = re.sub(r"^(?:步骤|章节|小节|章|节|阶段)\s*第?\s*[一二三四五六七八九十百\d]+\s*[：:.、]?\s*", "", s)
+    s = re.sub(r"^(?:step|part|section|sec|chapter|ch)\s*[-–—]?\s*[ivxlcdm\d]+\s*[：:.、]?\s*", "", s)
+    # 数字序号前缀：1. / 1、 / 1- / 3.1- / -1. / 3.1  等（纯数字型，无文字序数）
+    s = re.sub(r"^\s*[-–—]?\s*\d+(?:[.、\-–—]\d+)*\s*[.、\-–—]?\s*", "", s)
+    s = s.replace("/", "").replace("&", "").replace("+", "")  # I/O、C&C++/斜杠并入词内
+    s = re.sub(r"[\s.、·\-–—、；（）()]+", "-", s)   # 折叠分隔符与成对括号
     return s.strip("-")
 
 
@@ -267,16 +300,23 @@ def resolve_md_link(target, source_rel, index, repo):
 
 
 def heading_exists(rel, anchor, index):
-    """校验 `#anchor` 是否命中某文件的章节标题（用 GitHub 风格 slug 比对）。"""
+    """校验 `#anchor` 是否命中某文件的章节标题（GitHub slug 严格比对 +
+    宽松锚点 slug 容错比对：剥离 emoji/序号/步骤前缀，见 anchor_slug）。"""
     if not anchor:
         return True
     doc = index["files"].get(rel)
     if not doc:
         return False
     na = gh_slug(anchor)
+    na_loose = anchor_slug(anchor)
     for h in extract_headings(doc["body"]):
         if gh_slug(h) == na:
             return True
+        # 宽松比对（如 #1-概述 ↔ ## 1. 📖 概述；#2-生成-github-pat ↔ 步骤 1：生成 GitHub PAT）
+        if na_loose:
+            h_loose = anchor_slug(h)
+            if h_loose == na_loose or h_loose.startswith(na_loose + "-"):
+                return True
     return False
 
 

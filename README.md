@@ -132,6 +132,7 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/llmwiki-tutorial-02-channel.md` | 渠道接入：微信 / 企业微信桥接、serve 部署 |
 | `docs/llmwiki-tutorial-03-quality-tuning.md` | 检索质量调优：评估集、诊断、调参 |
 | `docs/llmwiki-eval.md` | **命令参考**：eval 全部选项、评估集 schema、报告字段、指标解读 |
+| `docs/llmwiki-evolution-roadmap.md` | **路线图**：从被动问答到知识库自进化（L0→L3） |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
 | `docs/obsidian-guide.md` | 可选：用 Obsidian 作为前端编辑器 |
 | `docs/pypi-release-guide.md` | 维护者：发布到 PyPI 的操作指南（注册/2FA/Token/twine） |

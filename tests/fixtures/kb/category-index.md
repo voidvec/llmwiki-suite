@@ -1,8 +1,8 @@
 ---
 title: "知识库分类导航索引"
 description: "按 categories 受控词表聚合全部文档的自动生成导航页，便于按主题发现内容。"
-created: "2026-08-25"
-updated: "2026-08-25"
+created: "2026-08-26"
+updated: "2026-08-26"
 version: "1.0"
 categories: ['导航索引']
 tags:

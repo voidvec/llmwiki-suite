@@ -11,9 +11,16 @@
 - 新增 GitHub Issue 模板（bug 报告 / 功能请求）。
 - 新增仓库级 pre-commit 钩子（check-yaml / 行尾 / EOF / 召回基线回归）。
 - CI 矩阵新增 Python 3.14。
+- `llmwiki eval --chart`：自包含 SVG 评估图表（指标卡 + 逐条命中），零第三方依赖。
+- 飞书 / Telegram 适配器（`FeishuAdapter` / `TelegramAdapter`，Webhook 驱动，
+  与 iLink/企业微信共用 `ChannelAdapter` 契约，`serve` 配置环境变量即注册）。
+- 新增 `docs/llmwiki-evolution-roadmap.md`：知识库自进化路线图
+  （L0 被动 → L1 记忆 → L2 主动建议 → L3 自主迭代，含实施顺序）。
 
 ### 变更
 - 测试套件改为在**已安装包**上运行（`pip install -e .`），去除指向 `src/` 的路径注入——「测试的就是发布的」。
+- README 渠道段改「渠道接入」并列 4 通道；tutorial-02 增补飞书 / Telegram 章节与变量。
+- eval 报告新增 `.svg` 图表输出。
 
 ## [0.1.1] - 2026-08-25
 

@@ -13,9 +13,11 @@ DEFAULT_EXCLUDE_DIRS = {
 }
 
 # 受控 categories 默认小词表（通用、面向个人知识管理的起点）。
-# 用户应在 llmwiki.toml 的 [categories].allowed 覆盖为自己的词表（整体替换）。
-# 注意：「导航索引」是 gen_index 生成的 category-index.md 专用类别，必须保留在词表内，
-# 否则新用户首次 lint 就会因生成产物报词表越界。
+# 语义（0.1.3 起）：toml 的 [categories].allowed 是在本默认表之上**追加**（合并去重），
+# 而不是整体替换——保证用户只写少量类别时不丢默认类别（如「导航索引」）。
+# 如需白名单模式（整体替换），在 toml 里设 [categories].replace_default = true。
+# 注意：「导航索引」是 gen_index 生成的索引产物专用类别，必须保留在词表内，
+# 否则新用户首次 lint 就会因分类产物报词表越界。
 DEFAULT_CATEGORIES = [
     "知识库规范", "软件架构", "会议纪要", "读书笔记",
     "工具指南", "参考手册", "导航索引",

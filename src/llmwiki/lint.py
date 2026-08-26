@@ -140,11 +140,23 @@ def lint_file(rel, index, vocab, repo):
     return issues
 
 
-def run_lint(cfg: Config, files=None, staged=False, report=None):
+def run_lint(cfg: Config, files=None, staged=False, report=None, sync_vocab=False):
     """巡检主入口。返回退出码（0 通过 / 1 有 error）。"""
     repo = str(cfg.repo)
     index = build_link_index(repo, cfg.exclude_dirs)
     vocab = load_vocab(cfg)
+
+    # 自愈：把索引派生的实际类别并入生效词表（不持久化到 toml，仅本次校验用）
+    if sync_vocab:
+        from .config import derive_vocab_from_index
+        derived = derive_vocab_from_index(cfg)
+        if derived - set(vocab or {}):
+            added = sorted(derived - set(vocab or {}))
+            vocab = (vocab or set()) | derived
+            print("[lint] --sync-vocab：并入索引派生类别 %d 个：%s"
+                  % (len(added), ", ".join(added)))
+        else:
+            print("[lint] 词表已覆盖全部实际类别，无需同步。")
     ignore_rules = load_ignore(repo)
 
     if files:

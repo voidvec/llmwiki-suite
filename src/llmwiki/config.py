@@ -122,10 +122,22 @@ def load_config(repo: Path) -> Config:
         extra = [extra]
     cfg.exclude_dirs |= {e.strip("/") for e in extra if e.strip("/")}
 
-    # [categories].allowed：整体替换语义
+    # [categories].allowed：增量语义（在套件默认词表之上追加，而非整体替换）。
+    # 理由：默认词表是「通用、起点」，用户库按各自主题扩展 —— 整体替换会让
+    # 写少类别就「丢默认类别」，造成大类库的误报（2026-08-26 实战教训）。
+    # 若确实想整体替换（白名单模式），用 [categories].replace_default = true。
     allowed = data.get("categories", {}).get("allowed")
     if isinstance(allowed, list) and allowed:
-        cfg.categories_allowed = [str(c) for c in allowed]
+        if data.get("categories", {}).get("replace_default", False):
+            cfg.categories_allowed = [str(c) for c in allowed]
+        else:
+            # 增量：默认词表 + toml 词表（保持顺序、去重）
+            merged = list(defaults.DEFAULT_CATEGORIES)
+            for c in allowed:
+                c = str(c).strip()
+                if c and c not in merged:
+                    merged.append(c)
+            cfg.categories_allowed = merged
         cfg.categories_source = "toml"
 
     # [aliases].groups：追加语义（在套件默认别名组之上扩展自定义组）
@@ -173,3 +185,19 @@ def load_vocab(cfg: Config) -> set | None:
     except Exception:
         pass
     return set(cfg.categories_allowed)
+
+
+def derive_vocab_from_index(cfg: Config) -> set:
+    """从 kb-index.json 的 category_index 派生全部**实际使用中**的类别。
+
+    供 `llmwiki categories-sync` 与 lint 的增量自愈用：类别 = 默认类别 ∪ 现存文档类别。
+    索引缺失时返回默认词表。
+    """
+    try:
+        import json
+        with open(cfg.index_path, "r", encoding="utf-8") as f:
+            idx = json.load(f)
+        derived = set(idx.get("category_index", {}).keys())
+    except Exception:
+        derived = set()
+    return derived | set(cfg.categories_allowed)

@@ -222,7 +222,8 @@ def cmd_eval(args) -> int:
     cfg = load_config(repo)
     run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
                  min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
-                 retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k)
+                 retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k,
+                 chart=args.chart)
     return 0
 
 
@@ -310,6 +311,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--tag", default=None)
     sp.add_argument("--retriever-desc", default=None)
     sp.add_argument("--prod-top-k", type=int, default=4)
+    sp.add_argument("--chart", action="store_true",
+                    help="额外生成自包含 SVG 评估图表")
     sp.set_defaults(func=cmd_eval)
 
     # serve

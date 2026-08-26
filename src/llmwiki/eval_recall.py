@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-eval_recall.py — 召回评估（recall@K / MRR）
+eval_recall.py — 召回评估（recall@K / MRR）+ 评估图表（SVG）
 
 对评估集中每条 query 跑 `recall(query, top_k=K)`（K 与生产 build_context 的
 max_chapters=6 统一），计算：
@@ -9,7 +9,8 @@ max_chapters=6 统一），计算：
 - contextual_precision@K：期望文档的排名位置（1-based；未命中记 0）
 - MRR@K                 ：命中条的平均倒数排名
 
-输出：控制台汇总 + Markdown 报告 + JSON 快照。
+输出：控制台汇总 + Markdown 报告 + JSON 快照 +（可选）自包含 SVG 图表
+（`--chart`，纯标准库生成，可嵌入 README / 网页 / CI 结果页）。
 
 套件化改造（相对个人库 scripts/_eval_recall.py）：
   - 评估集默认用包内置 data/eval_queries.json（通用示例集）；
@@ -151,8 +152,105 @@ def render_markdown(meta: dict, summary: dict, results: list[dict],
     return "\n".join(lines)
 
 
+# --------------------------------------------------------------------------
+# 评估图表（第 9 点）：自包含 SVG，零第三方依赖
+# --------------------------------------------------------------------------
+def render_chart_svg(meta: dict, summary: dict, results: list[dict],
+                     top_k: int) -> str:
+    """渲染一张自包含 SVG 图表（light 主题，可嵌任何页面/CI 结果页）。
+
+    布局（920 × 600）：
+      顶栏  标题 + meta（时间 / 评估集 / K / min_score / 条数）
+      指标卡 4 张：recall@K、prod recall、MRR、平均期望排名（含同比色）
+      列表  逐条 query：✓/✗ + 查询 + 期望排名（最多 12 条，超出折叠）
+      底注  生成来源
+    """
+    n = max(summary["count"], 1)
+    hit = summary["hit_count"]
+    recall = summary["contextual_recall"] * 100.0
+    recall_prod = summary["contextual_recall_prod"] * 100.0
+    mrr = summary["mrr"] * 100.0
+    avg_rank = summary["avg_rank_of_hits"]
+
+    W, H = 920, 560
+    x = 28
+    out = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
+        f'viewBox="0 0 {W} {H}">',
+        f'  <rect width="{W}" height="{H}" fill="#ffffff"/>',
+        '  <text x="%d" y="28" font-family="Segoe UI, PingFang SC, Microsoft '
+        'YaHei, sans-serif" font-size="20" font-weight="700" fill="#1f2937">'
+        'LlmWiki 召回评估</text>' % x,
+        '  <text x="%d" y="56" font-family="Segoe UI, PingFang SC, Microsoft '
+        'YaHei, sans-serif" font-size="12" fill="#6b7280">%s · %s · K=%d · '
+        'min_score=%.2f · %d 条</text>'
+        % (x, meta.get("generated_at", ""),
+           os.path.basename(meta.get("queries_path", "")), top_k,
+           float(meta.get("min_score", 0.0)), summary["count"]),
+    ]
+
+    # 4 张指标卡
+    cards = [
+        ("recall@%d" % top_k, "%.0f%%" % recall, "%d/%d 命中" % (hit, n), "#16a34a"),
+        ("prod recall@%d" % summary["prod_top_k"], "%.0f%%" % recall_prod,
+         "生产截断（max_chapters）", "#2563eb"),
+        ("MRR@%d" % top_k, "%.0f%%" % mrr, "平均倒数排名", "#ca8a04"),
+        ("平均期望排名", "%.2f" % avg_rank, "仅命中条", "#334155"),
+    ]
+    gap, card_h = 18, 88
+    cw = (W - 2 * x - 3 * gap) // 4
+    for i, (label, big, sub, color) in enumerate(cards):
+        cx = x + i * (cw + gap)
+        out.append(f'  <rect x="{cx}" y="78" width="{cw}" height="{card_h}" '
+                   f'rx="10" fill="#f8fafc" stroke="#e2e8f0"/>')
+        out.append(f'  <text x="{cx+14}" y="102" font-family="Segoe UI, '
+                   f'sans-serif" font-size="12" font-weight="600" '
+                   f'fill="#475569">{label}</text>')
+        out.append(f'  <text x="{cx+14}" y="136" font-family="Segoe UI, '
+                   f'sans-serif" font-size="30" font-weight="800" '
+                   f'fill="{color}">{big}</text>')
+        out.append(f'  <text x="{cx+14}" y="156" font-family="Segoe UI, '
+                   f'sans-serif" font-size="10" fill="#94a3b8">{sub}</text>')
+    out.append(
+        '  <text x="%d" y="212" font-family="Segoe UI, PingFang SC, Microsoft '
+        'YaHei, sans-serif" font-size="13" font-weight="700" fill="#1f2937">'
+        '逐条查询 · ✓ 期望文档命中 · ✗ 未命中</text>' % x)
+
+    shown = results[:12]
+    base_y = 238
+    for i, r in enumerate(shown):
+        yy = base_y + i * 26
+        rank = r.get("rank")
+        ok = rank is not None
+        color = "#16a34a" if ok else "#dc2626"
+        mark = "✓" if ok else "✗"
+        q = r["query"]
+        q = (q[:44] + "…") if len(q) > 44 else q
+        out.append(f'  <text x="{x}" y="{yy}" font-family="Segoe UI, sans-serif" '
+                   f'font-size="12" font-weight="700" fill="{color}">{mark}</text>')
+        out.append(f'  <text x="{x+20}" y="{yy}" font-family="Segoe UI, PingFang '
+                   f'SC, Microsoft YaHei, sans-serif" font-size="12" '
+                   f'fill="#334155">{q}</text>')
+        out.append(f'  <text x="{W-24}" y="{yy}" text-anchor="end" '
+                   f'font-family="Segoe UI, sans-serif" font-size="12" '
+                   f'font-weight="700" fill="{color}">'
+                   f'{"#" + str(rank) if ok else "miss"}</text>')
+    if len(results) > 12:
+        out.append(
+            '  <text x="%d" y="%d" font-family="Segoe UI, sans-serif" '
+            'font-size="11" fill="#94a3b8">… 其余 %d 条（完整逐条见报告）</text>'
+            % (x, base_y + 12 * 26 + 4, len(results) - 12))
+    out.append(
+        '  <text x="%d" y="%d" font-family="Segoe UI, sans-serif" font-size="10" '
+        'fill="#94a3b8">由 llmwiki eval --chart 生成 · metadata/queries 见同目录 '
+        'recall-eval-*.{md,json}</text>' % (x, H - 14))
+    out.append("</svg>")
+    return "\n".join(out)
+
+
 def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
-                 out_dir=None, tag=None, retriever_desc=None, prod_top_k=4):
+                 out_dir=None, tag=None, retriever_desc=None, prod_top_k=4,
+                 chart=False):
     repo = str(cfg.repo)
     queries_path = queries_path or os.path.join(repo, "eval_queries.json")
     if not os.path.isfile(queries_path):
@@ -206,7 +304,7 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         top1 = r["top"][0]["path"] if r["top"] else "EMPTY"
         print(f"  [{mark}{rank}] {i}. {r['query']}  ->  {top1}")
 
-    # 落盘报告 + JSON 快照
+    # 落盘报告 + JSON 快照 +（可选）SVG 图表
     out_dir = out_dir or os.path.join(repo, "eval_reports")
     os.makedirs(out_dir, exist_ok=True)
     md_path = os.path.join(out_dir, f"recall-eval-{tag}.md")
@@ -218,6 +316,11 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
     print(f"[eval] report   -> {md_path}")
     print(f"[eval] snapshot -> {json_path}")
+    if chart:
+        svg_path = os.path.join(out_dir, f"recall-eval-{tag}.svg")
+        with open(svg_path, "w", encoding="utf-8") as f:
+            f.write(render_chart_svg(meta, summary, results, top_k))
+        print(f"[eval] chart    -> {svg_path}")
 
 
 def main(argv=None):
@@ -233,6 +336,8 @@ def main(argv=None):
     ap.add_argument("--tag", default=None)
     ap.add_argument("--retriever-desc", default=None)
     ap.add_argument("--prod-top-k", type=int, default=4)
+    ap.add_argument("--chart", action="store_true",
+                    help="额外生成自包含 SVG 评估图表（写到 <out-dir>/recall-eval-<tag>.svg）")
     args = ap.parse_args(argv)
 
     repo = resolve_repo(args.repo)
@@ -241,7 +346,8 @@ def main(argv=None):
         cfg.min_score_per_term = args.min_score_per_term
     run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
                  min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
-                 retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k)
+                 retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k,
+                 chart=args.chart)
     return 0
 
 

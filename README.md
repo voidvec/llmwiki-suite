@@ -66,9 +66,9 @@ llmwiki query "..."    # 5. 检索 / 问答
 
 所有命令支持 `--repo <path>` 显式指定库路径（默认取当前目录）。
 
-## 微信渠道接入（个人微信 / 企业微信）
+## 渠道接入（微信 / 企业微信 / 飞书 / Telegram）
 
-用 `llmwiki serve` 把知识库接到微信，直接发消息问答：
+用 `llmwiki serve` 把知识库接到 IM，直接发消息问答：
 
 ```bash
 # ① 已装渠道版则直接可用；否则先补装渠道依赖
@@ -87,6 +87,16 @@ llmwiki serve --host 127.0.0.1 --port 8000
   `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定成功后
   直接在微信里给 bot 发消息即查即答。
 - **企业微信**：配置 `LLM_WIKI_WECOM_*` 环境变量后自动启用回调 / 主动推送通道。
+- **飞书**：配置 `LLM_WIKI_FEISHU_APP_ID` / `LLM_WIKI_FEISHU_APP_SECRET`（可选
+  `LLM_WIKI_FEISHU_VERIFY_TOKEN` 做事件签名校验），在飞书开放平台把事件订阅
+  回调地址设为 `https://<你的域名>/feishu/callback` 即可（challenge 自动应答）。
+- **Telegram**：用 @BotFather 建 bot 得 token，配置 `LLM_WIKI_TELEGRAM_BOT_TOKEN`，
+  把 webhook 设到 `https://<你的域名>/telegram/callback`
+  （`setWebhook`；可用 `LLM_WIKI_TELEGRAM_SECRET_TOKEN` 做回调鉴权）。
+
+> 三个外部通道默认**不启用**，只有对应 `LLM_WIKI_*` 环境变量配置齐全才会
+> 在 `serve` 启动时注册路由（`/healthz` 会列出各通道 `enabled/configured` 状态）。
+> Telegram webhook 需要公网可达地址（可用 frp / ngrok / 腾讯云轻量等反代到 8000）。
 
 ### 换 LLM 厂商 / 模型（OpenAI 兼容协议即可）
 
@@ -108,7 +118,8 @@ llmwiki serve --host 127.0.0.1 --port 8000
 
 - **库配置**：库根 `llmwiki.toml`（categories 词表、排除目录、模型名等非密钥项）
 - **密钥**：只走环境变量（`LLM_WIKI_API_KEY`、`LLM_WIKI_BRIDGE_TOKEN`、
-  `LLM_WIKI_WECOM_*`、`LLM_WIKI_ILINK_*`），本套件不读取任何 `.env` 文件
+  `LLM_WIKI_WECOM_*`、`LLM_WIKI_ILINK_*`、`LLM_WIKI_FEISHU_*`、
+  `LLM_WIKI_TELEGRAM_*`），本套件不读取任何 `.env` 文件
 
 ## 文档
 

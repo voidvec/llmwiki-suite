@@ -41,6 +41,8 @@ from ..config import load_config, resolve_repo
 from .. import _env
 from .ilink_adapter import IlinkAdapter
 from .wecom_adapter import WeComAdapter
+from .feishu_adapter import FeishuAdapter
+from .telegram_adapter import TelegramAdapter
 
 app = FastAPI(title="LlmWiki WeChat Bridge")
 
@@ -77,6 +79,10 @@ if _env.getenv("WECOM_TOKEN") and _env.getenv("WECOM_AES_KEY"):
     adapters.append(WeComAdapter(assistant))
 if _env.getenv("ENABLE_ILINK", "1") != "0":
     adapters.append(IlinkAdapter(assistant))
+if _env.getenv("FEISHU_APP_ID") and _env.getenv("FEISHU_APP_SECRET"):
+    adapters.append(FeishuAdapter(assistant))
+if _env.getenv("TELEGRAM_BOT_TOKEN"):
+    adapters.append(TelegramAdapter(assistant))
 
 for ad in adapters:
     ad.register_routes(app)

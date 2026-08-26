@@ -28,13 +28,15 @@ version: "2.0"
 
 ```
 微信(个人号) ──iLink Bot API(轮询)──► IlinkAdapter ──┐
-                                                      ├─► KbAssistant ──► KbRetriever(本地 kb-index.json) ──► 答案回微信
-企业微信 ────────Webhook 回调────────► WeComAdapter ──┘
+                                                      ├─► KbAssistant ──► KbRetriever(本地 kb-index.json) ──► 答案回消息
+企业微信 ────────Webhook 回调────────► WeComAdapter ──┤
+飞书(Lark) ──────Webhook 事件订阅────► FeishuAdapter ─┤
+Telegram ────────Webhook(setWebhook)─► TelegramAdapter┘
 ```
 
 - **个人微信走 iLink**：服务端主动长轮询 `ilinkai.weixin.qq.com`，**不需要公网 / 内网穿透**（相对企业微信的最大优势）。
-- **企业微信走 Webhook**：需要公网可达的回调地址（或内网穿透）。
-- 两条通道共用同一个 `KbAssistant`（召回 → 拼 prompt → 调 LLM → 附来源），与传输方式解耦。
+- **企业微信 / 飞书 / Telegram 走 Webhook**：外部平台把消息 POST 到我们的回调端点，需要公网可达地址（或内网穿透）。
+- 所有通道共用同一个 `KbAssistant`（召回 → 拼 prompt → 调 LLM → 附来源），与传输方式解耦。
 
 分层（自下而上）：**通道层 `ChannelAdapter`** → **应答编排层 `KbAssistant`** → **召回层 `KbRetriever`**（依赖 `kb_core` 的链接铁律）。`channels/wechat_bridge.py` 只做「装配 + 生命周期 + 对外 HTTP 端点」。
 
@@ -93,6 +95,10 @@ pip install "llmwiki-suite[wechat]"
 | `LLM_WIKI_ILINK_CDN_BASE_URL` | 否 | `https://novac2c.cdn.weixin.qq.com/c2c` | 媒体 CDN |
 | `LLM_WIKI_ILINK_BOT_TOKEN` | 否 | 空（走扫码） | 直接注入已有 token，跳过扫码 |
 | `LLM_WIKI_ILINK_SESSION_FILE` | 否 | `.ilink_session.json` | 会话持久化（已在 .gitignore） |
+| `LLM_WIKI_FEISHU_APP_ID` / `LLM_WIKI_FEISHU_APP_SECRET` | 飞书需 | 空 → 不启用 | 飞书应用凭据（回调 `/feishu/callback`） |
+| `LLM_WIKI_FEISHU_VERIFY_TOKEN` | 飞书可选 | 空（不校验） | 飞书事件签名校验令牌 |
+| `LLM_WIKI_TELEGRAM_BOT_TOKEN` | Telegram 需 | 空 → 不启用 | 机器人 token（@BotFather） |
+| `LLM_WIKI_TELEGRAM_SECRET_TOKEN` | Telegram 可选 | 空（不鉴权） | 回调 secret（`X-Telegram-Bot-Api-Secret-Token`） |
 
 > 🔒 `.ilink_session.json` 已在 `.gitignore` 中，**token 不出仓库**，可放心持久化。
 
@@ -260,6 +266,48 @@ export LLM_WIKI_WECOM_AGENTID="1000002"
 - 回调地址：`GET/POST /wechat/callback`（已实现签名校验 + XML 加解密被动回复）。
 - 企业微信需**公网可达**回调（或内网穿透），与个人微信（iLink 轮询、无需公网）相反。
 - 5s 被动回复超时不在套件范围，长任务走主动推送（`WeComAdapter.push_text`）。
+
+---
+
+## 6.5 飞书（Lark）接入（可选）
+
+飞书是 **Webhook 事件订阅**模型：飞到回调 `POST /feishu/callback`，无强制加密，仅需 app 凭据换 token。
+
+```bash
+export LLM_WIKI_FEISHU_APP_ID="cli_xxx"
+export LLM_WIKI_FEISHU_APP_SECRET="xxx"
+export LLM_WIKI_FEISHU_VERIFY_TOKEN="xxx"   # 可选：事件签名校验（建议开）
+```
+
+- 在飞书开放平台「事件订阅」把回调地址设为 `https://<你的域名>/feishu/callback`；
+  平台发 `challenge` 校验时本适配器**自动原样返回**。
+- 收到 `im.message.receive_v1` 文本事件 → `assistant.answer()` → 用 `im/v1/messages` API
+  主动回复（不受 3s 被动超时限制）。
+- 需公网可达回调；`/healthz` 显示 `feishu.configured`。
+
+---
+
+## 6.6 Telegram 接入
+
+Telegram 是所有通道中**最简**的：无加密、无签名，只有 bot token（加可选 secret token 做鉴权）。
+
+```bash
+export LLM_WIKI_TELEGRAM_BOT_TOKEN="123456:ABC-xxx"   # @BotFather 建 bot 取得
+export LLM_WIKI_TELEGRAM_SECRET_TOKEN="optional-secret"  # 可选：回调鉴权
+```
+
+启用 webhook（把回调指到你的公网地址）：
+
+```bash
+curl -F "url=https://<你的域名>/telegram/callback" \
+     -F "secret_token=optional-secret" \
+     "https://api.telegram.org/bot<TOKEN>/setWebhook"
+```
+
+- 收到 `message.text` → `assistant.answer()` → `sendMessage` 回复到原 chat。
+- 需要**公网 HTTPS**（Telegram 不支持自签证书，需用 frp / ngrok / 腾讯云负载均衡）。
+- 建议配合 `LLM_WIKI_TELEGRAM_SECRET_TOKEN` 且 HTTPS 层验证（Telegram 官方支持自定义 header 鉴权）。
+- ` 健康状态见 `/healthz` 的 `telegram`.
 
 ---
 

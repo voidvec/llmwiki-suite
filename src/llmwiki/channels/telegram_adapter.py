@@ -26,8 +26,14 @@ from .channel_base import ChannelAdapter
 
 LOG = logging.getLogger("telegram")
 
-TELEGRAM_BOT_TOKEN = _env.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_SECRET_TOKEN = _env.getenv("TELEGRAM_SECRET_TOKEN", "")
+
+def _telegram_config() -> tuple[str, str]:
+    """运行时读取 Telegram 配置（LLM_WIKI_TELEGRAM_BOT_TOKEN / SECRET_TOKEN），
+    避免模块 import 时冻结——serve 进程里可改 env 热启停该通道。"""
+    return (
+        _env.getenv("TELEGRAM_BOT_TOKEN", ""),
+        _env.getenv("TELEGRAM_SECRET_TOKEN", ""),
+    )
 
 
 class TelegramAdapter(ChannelAdapter):
@@ -35,9 +41,10 @@ class TelegramAdapter(ChannelAdapter):
     description = "Telegram Bot（Webhook，@BotFather 建 bot 后设 webhook）"
 
     def _api(self, method: str, params: dict):
-        if not TELEGRAM_BOT_TOKEN:
+        bot_token, _ = _telegram_config()
+        if not bot_token:
             return None
-        url = ("https://api.telegram.org/bot%s/%s" % (TELEGRAM_BOT_TOKEN, method))
+        url = ("https://api.telegram.org/bot%s/%s" % (bot_token, method))
         body = json.dumps(params).encode("utf-8")
         req = urllib.request.Request(
             url, data=body, method="POST",
@@ -54,8 +61,9 @@ class TelegramAdapter(ChannelAdapter):
         @app.post("/telegram/callback")
         async def telegram_callback(request: Request,
                                     x_telegram_bot_api_secret_token: str | None = Header(None)):
-            if TELEGRAM_SECRET_TOKEN and \
-                    x_telegram_bot_api_secret_token != TELEGRAM_SECRET_TOKEN:
+            bot_token, secret_token = _telegram_config()
+            if secret_token and \
+                    x_telegram_bot_api_secret_token != secret_token:
                 return Response("forbidden", status_code=403)
             body = await request.body()
             raw = body.decode("utf-8")
@@ -63,8 +71,8 @@ class TelegramAdapter(ChannelAdapter):
                 update = json.loads(raw)
             except Exception as e:
                 return {"error": "bad JSON: %s" % e}
-            if not TELEGRAM_BOT_TOKEN:
-                return {"hint": "配置 TELEGRAM_BOT_TOKEN 后实现应答",
+            if not bot_token:
+                return {"hint": "配置 LLM_WIKI_TELEGRAM_BOT_TOKEN 后实现应答",
                         "received_bytes": len(raw)}
             msg = update.get("message") or {}
             text = (msg.get("text") or "").strip()
@@ -81,5 +89,6 @@ class TelegramAdapter(ChannelAdapter):
             return {"ok": True}
 
     def health(self):
+        bot_token, _ = _telegram_config()
         return {"name": self.name, "enabled": True,
-                "configured": bool(TELEGRAM_BOT_TOKEN)}
+                "configured": bool(bot_token)}

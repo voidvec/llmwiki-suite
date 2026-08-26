@@ -71,18 +71,14 @@ assistant = KbAssistant(INDEX)
 
 BRIDGE_TOKEN = _env.getenv("BRIDGE_TOKEN", "")
 
-# 实例化已配置的通道：
-#  - 企业微信：配置 WECOM_TOKEN + WECOM_AES_KEY 即启用（Webhook 驱动）
-#  - iLink：默认启用（ENABLE_ILINK=0 关闭）；无 token 时后台空闲，不触网
+# 实例化通道：统一注册路由，通道实际启用状态由 adapter 内运行时读 env 判断
+# （serve 进程内改 env 即可热启停单通道；/healthz 显示 configured/enabled）。
 adapters = []
-if _env.getenv("WECOM_TOKEN") and _env.getenv("WECOM_AES_KEY"):
-    adapters.append(WeComAdapter(assistant))
+adapters.append(WeComAdapter(assistant))
 if _env.getenv("ENABLE_ILINK", "1") != "0":
     adapters.append(IlinkAdapter(assistant))
-if _env.getenv("FEISHU_APP_ID") and _env.getenv("FEISHU_APP_SECRET"):
-    adapters.append(FeishuAdapter(assistant))
-if _env.getenv("TELEGRAM_BOT_TOKEN"):
-    adapters.append(TelegramAdapter(assistant))
+adapters.append(FeishuAdapter(assistant))
+adapters.append(TelegramAdapter(assistant))
 
 for ad in adapters:
     ad.register_routes(app)

@@ -31,22 +31,31 @@ from .channel_base import ChannelAdapter
 
 LOG = logging.getLogger("feishu")
 
-FEISHU_APP_ID = _env.getenv("FEISHU_APP_ID", "")
-FEISHU_APP_SECRET = _env.getenv("FEISHU_APP_SECRET", "")
-FEISHU_VERIFY_TOKEN = _env.getenv("FEISHU_VERIFY_TOKEN", "")
-
 # 飞书开放平台 API 根（国内版）
 FEISHU_BASE = "https://open.feishu.cn/open-apis"
 _TOK_CACHE = {"token": "", "exp": 0.0}
 
 
+def _feishu_config() -> tuple[str, str, str]:
+    """运行时读取飞书配置（LLM_WIKI_FEISHU_APP_ID / APP_SECRET / VERIFY_TOKEN），
+    避免模块 import 时冻结——serve 进程里可改 env 热启停该通道。"""
+    return (
+        _env.getenv("FEISHU_APP_ID", ""),
+        _env.getenv("FEISHU_APP_SECRET", ""),
+        _env.getenv("FEISHU_VERIFY_TOKEN", ""),
+    )
+
+
 def _tenant_access_token() -> str:
     """换 tenant_access_token（2h 有效，缓存复用）。"""
+    app_id, app_secret, _ = _feishu_config()
+    if not app_id or not app_secret:
+        return ""
     if _TOK_CACHE["token"] and time.time() < _TOK_CACHE["exp"]:
         return _TOK_CACHE["token"]
     body = json.dumps({
-        "app_id": FEISHU_APP_ID,
-        "app_secret": FEISHU_APP_SECRET,
+        "app_id": app_id,
+        "app_secret": app_secret,
     }).encode("utf-8")
     req = urllib.request.Request(
         FEISHU_BASE + "/auth/v3/tenant_access_token/internal",
@@ -64,10 +73,11 @@ def _tenant_access_token() -> str:
 
 def _verify_signature(timestamp: str, nonce: str, body: str, sign: str) -> bool:
     """飞书事件签名校验（v1：sha256(sort(token,timestamp,nonce,body))）。"""
-    if not body or not timestamp or not nonce or not sign:
+    _, _, verify_token = _feishu_config()
+    if not verify_token or not body or not timestamp or not nonce or not sign:
         return False
-    string_to_sign = "".join(sorted([FEISHU_VERIFY_TOKEN, timestamp, nonce, body]))
-    calc = hmac.new(FEISHU_VERIFY_TOKEN.encode("utf-8"),
+    string_to_sign = "".join(sorted([verify_token, timestamp, nonce, body]))
+    calc = hmac.new(verify_token.encode("utf-8"),
                     string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
     return hmac.compare_digest(calc, sign)
 
@@ -89,20 +99,23 @@ class FeishuAdapter(ChannelAdapter):
                 data = json.loads(raw)
             except Exception as e:
                 return {"error": "bad JSON: %s" % e}
-            if not FEISHU_APP_ID:
-                return {"hint": "配置 FEISHU_APP_ID/FEISHU_APP_SECRET 后实现事件应答",
-                        "received_bytes": len(raw)}
 
-            # 1) challenge（URL 验证）
+            # 0) challenge（URL 验证）——不依赖凭据配置，平台校验必答
             if data.get("type") == "url_verification" or "challenge" in data:
                 return {"challenge": data["challenge"]}
+
+            app_id, app_secret, _ = _feishu_config()
+            if not app_id or not app_secret:
+                return {"hint": "配置 LLM_WIKI_FEISHU_APP_ID/APP_SECRET 后实现事件应答",
+                        "received_bytes": len(raw)}
 
             if data.get("type") != "event_callback":
                 return {"ok": False, "reason": "unsupported event type"}
 
             # 2) 事件签名校验（有 token 时；无 token 仅开发自测放行）
+            _, _, verify_token = _feishu_config()
             header = data.get("header", {})
-            if FEISHU_VERIFY_TOKEN:
+            if verify_token:
                 ts = header.get("timestamp", "")
                 n = header.get("nonce", "")
                 sign = header.get("signature", "")
@@ -165,5 +178,6 @@ class FeishuAdapter(ChannelAdapter):
             return False
 
     def health(self):
+        app_id, app_secret, _ = _feishu_config()
         return {"name": self.name, "enabled": True,
-                "configured": bool(FEISHU_APP_ID and FEISHU_APP_SECRET)}
+                "configured": bool(app_id and app_secret)}

@@ -252,14 +252,29 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
                  out_dir=None, tag=None, retriever_desc=None, prod_top_k=4,
                  chart=False):
     repo = str(cfg.repo)
-    queries_path = queries_path or os.path.join(repo, "eval_queries.json")
+    default_qp = os.path.join(repo, "eval_queries.json")
+    queries_path = queries_path or default_qp
+    used_builtin = False
     if not os.path.isfile(queries_path):
+        used_builtin = True
         queries_path = _BUILTIN_QUERIES
+        print("[eval] ⚠ 未找到 %s，回退使用套件内置示例评测集。" % default_qp,
+              file=sys.stderr)
+        print("[eval]   内置集 expected 指向套件 demo/notes 库，与你的知识库无关，"
+              "分数不具参考意义！", file=sys.stderr)
+        print("[eval]   请放置 <库根>/eval_queries.json（见 docs/llmwiki-eval.md），"
+              "或用 --queries 指定评测集。", file=sys.stderr)
     tag = tag or f"baseline-{date.today().isoformat()}"
     retriever_desc = retriever_desc or "llmwiki.recall.KbRetriever (BM25 + body_text + wikilink graph)"
 
     queries = load_queries(queries_path)
     top_k = top_k or int(queries.get("top_k", 4))
+    # 索引缺失时给出可操作指引，而不是抛裸 FileNotFoundError
+    if not os.path.isfile(cfg.index_path):
+        print(f"[eval] 找不到索引 {cfg.index_path}", file=sys.stderr)
+        print("[eval]   请先在库根运行 `llmwiki index` 生成 kb-index.json 后再做评估。",
+              file=sys.stderr)
+        return 1
     retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
                             alias_groups=cfg.alias_groups,
                             min_score_per_term=cfg.min_score_per_term,
@@ -276,6 +291,7 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "index_path": os.path.relpath(cfg.index_path, repo),
         "queries_path": queries_path,
+        "queries_is_builtin": used_builtin,
         "top_k": top_k,
         "min_score": min_score,
         "min_score_per_term": cfg.min_score_per_term,
@@ -321,6 +337,7 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         with open(svg_path, "w", encoding="utf-8") as f:
             f.write(render_chart_svg(meta, summary, results, top_k))
         print(f"[eval] chart    -> {svg_path}")
+    return 0
 
 
 def main(argv=None):

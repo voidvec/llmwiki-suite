@@ -105,3 +105,188 @@ class TestLoadConfig:
         from llmwiki.config import load_config
         cfg = load_config(p)
         assert "_private" in cfg.exclude_dirs
+
+
+# ---- categories 增量语义（0.1.3：默认之上追加，非整体替换）----
+
+class TestCategoriesIncremental:
+    def test_toml_allowed_merges_on_top_of_defaults(self, tmp_path):
+        """[categories].allowed 为增量语义：默认词表 + toml 词表（去重保序）。"""
+        p = _make_kb(tmp_path)
+        (p / "llmwiki.toml").write_text(
+            '[categories]\nallowed = ["kubernetes", "软件架构"]\n', encoding="utf-8")
+        from llmwiki.config import load_config
+        from llmwiki import defaults
+        cfg = load_config(p)
+        # 默认类别一个不丢（含「导航索引」产物类别）
+        for c in defaults.DEFAULT_CATEGORIES:
+            assert c in cfg.categories_allowed
+        # toml 新增类别追加
+        assert "kubernetes" in cfg.categories_allowed
+        # 已在默认词表里的不重复添加
+        assert cfg.categories_allowed.count("软件架构") == 1
+
+    def test_replace_default_whitelist_mode(self, tmp_path):
+        """replace_default=true 时为白名单（整体替换），默认类别全部丢弃。"""
+        p = _make_kb(tmp_path)
+        (p / "llmwiki.toml").write_text(
+            '[categories]\nallowed = ["only-a"]\nreplace_default = true\n',
+            encoding="utf-8")
+        from llmwiki.config import load_config
+        cfg = load_config(p)
+        assert cfg.categories_allowed == ["only-a"]
+        assert "导航索引" not in cfg.categories_allowed
+
+    def test_categories_source_flag(self, tmp_path):
+        """显式配置 toml 后 categories_source 记为 toml（load_vocab 据此前缀）。"""
+        p = _make_kb(tmp_path)
+        (p / "llmwiki.toml").write_text(
+            '[categories]\nallowed = ["x"]\n', encoding="utf-8")
+        from llmwiki.config import load_config
+        assert load_config(p).categories_source == "toml"
+
+
+# ---- derive_vocab_from_index（categories-sync 的数据源）----
+
+class TestDeriveVocabFromIndex:
+    def test_derive_from_index(self, tmp_path):
+        p = _make_kb(tmp_path)
+        (p / "kb-index.json").write_text(
+            '{"category_index": {"工具指南": 1, "新分类A": 1}}', encoding="utf-8")
+        from llmwiki.config import load_config, derive_vocab_from_index
+        derived = derive_vocab_from_index(load_config(p))
+        assert "新分类A" in derived
+        assert "工具指南" in derived
+
+    def test_missing_index_falls_back_to_defaults(self, tmp_path):
+        p = _make_kb(tmp_path)
+        from llmwiki.config import load_config, derive_vocab_from_index
+        from llmwiki import defaults
+        derived = derive_vocab_from_index(load_config(p))
+        assert set(defaults.DEFAULT_CATEGORIES) <= derived
+
+
+# ---- anchor_slug：序号前缀三态 + emoji 剥离 ----
+
+class TestAnchorSlug:
+    def test_pure_number_prefix(self):
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("1. 概述") == "概述"
+        assert anchor_slug("3.1 配置") == "配置"
+        assert anchor_slug("1、概述") == "概述"
+
+    def test_cn_ordinal_number_after(self):
+        """第 N 步：数字在后。"""
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("第 1 步：初始化") == "初始化"
+        assert anchor_slug("第2章:安装") == "安装"
+
+    def test_cn_prefix_number_before(self):
+        """步骤 N：数字在前（此前漏处理的场景）。"""
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("步骤 1：生成 GitHub PAT") == "生成-github-pat"
+        assert anchor_slug("步骤2：部署") == "部署"
+
+    def test_en_ordinal(self):
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("Step 4 - 部署") == "部署"
+        assert anchor_slug("Part IV: 进阶") == "进阶"
+
+    def test_emoji_and_heading_mark_stripped(self):
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("1. 📖 概述") == "概述"
+        assert anchor_slug("## 1. 📖 概述") == "概述"
+
+    def test_slash_folds_into_single_token(self):
+        """C/C++ 前后缀并入（cc），链接侧 #c-c 与该形态不匹配 => 修链接侧而非过度容错。"""
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("3.1 🧠 C/C++ 扩展配置") == "cc-扩展配置"
+
+
+# ---- heading_exists：gh_slug 严格 + anchor_slug 宽松双段比对 ----
+
+class TestHeadingExistsAnchorFallback:
+    @staticmethod
+    def _build(tmp_path: Path, heading: str) -> Path:
+        (tmp_path / "README.md").write_text("# t\n", encoding="utf-8")
+        (tmp_path / "notes").mkdir()
+        md = ("---\ntitle: t\ntags: [a]\ndescription: d\ndifficulty: beginner\n---\n"
+              + heading + "\n")
+        (tmp_path / "notes" / "doc.md").write_text(md, encoding="utf-8")
+        return tmp_path
+
+    def test_strict_gh_slug_hit(self, tmp_path):
+        from llmwiki.kb_core import build_link_index, heading_exists
+        p = self._build(tmp_path, "# 概述")
+        idx = build_link_index(str(p), {"templates"})
+        assert heading_exists("notes/doc.md", "概述", idx)
+
+    def test_loose_number_prefix(self, tmp_path):
+        """链接 `#1-概述` ↔ 标题 `## 1. 📖 概述`。"""
+        from llmwiki.kb_core import build_link_index, heading_exists
+        p = self._build(tmp_path, "# 1. 📖 概述")
+        idx = build_link_index(str(p), {"templates"})
+        assert heading_exists("notes/doc.md", "1-概述", idx)
+        assert heading_exists("notes/doc.md", "概述", idx)
+
+    def test_loose_step_prefix(self, tmp_path):
+        """链接 `#2-生成-github-pat` ↔ 标题 `步骤 1：生成 GitHub PAT`。"""
+        from llmwiki.kb_core import build_link_index, heading_exists
+        p = self._build(tmp_path, "# 步骤 1：生成 GitHub PAT")
+        idx = build_link_index(str(p), {"templates"})
+        assert heading_exists("notes/doc.md", "生成-github-pat", idx)
+
+    def test_no_overmatching_short_anchor(self, tmp_path):
+        """宽松比对是「短锚匹配长头」：`#安装` 不得命中 `## 安装脚本`（防过度容错）。"""
+        from llmwiki.kb_core import build_link_index, heading_exists
+        p = self._build(tmp_path, "# 安装脚本")
+        idx = build_link_index(str(p), {"templates"})
+        assert not heading_exists("notes/doc.md", "安装", idx)
+
+
+# ---- eval：内置评测集回退 + 索引缺失指引 ----
+
+class TestEvalBuiltinFallback:
+    def test_missing_index_gives_guidance_exitcode1(self, tmp_path, capsys):
+        """索引缺失时返回 1 并提示先 `llmwiki index`，不裸抛 FileNotFoundError。"""
+        from llmwiki.config import load_config
+        from llmwiki.eval_recall import run_eval_cmd
+        p = _make_kb(tmp_path)  # 只有 README，无 kb-index.json
+        cfg = load_config(p)
+        rc = run_eval_cmd(cfg, queries_path=str(p / "eval_queries.json"))
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "llmwiki index" in err
+
+    def test_builtin_queries_fallback_marks_meta(self, tmp_path, monkeypatch,
+                                                 capsys):
+        """>=0.1.3：库根无 eval_queries.json 时回退内置集，meta 记录 queries_is_builtin。"""
+        import json
+        from llmwiki.config import load_config
+        import llmwiki.eval_recall as er
+        p = _make_kb(tmp_path)
+        (p / "kb-index.json").write_text("{}", encoding="utf-8")  # 仅让索引存在检查通过
+        cfg = load_config(p)
+
+        class _FakeFreshness:
+            stale = unknown = False
+            changed = added = deleted = []
+            def summary(self):
+                return "fresh"
+
+        class _FakeRetriever:
+            freshness = _FakeFreshness()
+            def recall(self, *a, **k):
+                return []   # 不对真实召回敏感，本测试只验证回退标记
+
+        monkeypatch.setattr(er, "KbRetriever", lambda *a, **k: _FakeRetriever())
+        out_dir = tmp_path / "out"
+        rc = er.run_eval_cmd(cfg, queries_path=str(p / "eval_queries.json"),
+                             out_dir=str(out_dir))
+        err = capsys.readouterr().err
+        assert rc == 0
+        assert "内置" in err  # 打印了回退警告
+        snaps = list(out_dir.glob("recall-eval-*.json"))
+        assert snaps, "未生成 JSON 快照"
+        meta = json.loads(snaps[0].read_text(encoding="utf-8"))["meta"]
+        assert meta["queries_is_builtin"] is True

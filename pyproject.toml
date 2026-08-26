@@ -4,11 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmwiki-suite"
-version = "0.1.2"
+version = "0.1.3"
 description = "LLM-compiled personal wiki toolkit: BM25 + wikilink-graph recall, lint, and chat channels over plain Markdown notes."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
+# classifiers 会同步到 PyPI metadata，pyversions badge / python missing 都依赖它
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    # 注意：不要加「License :: OSI Approved :: MIT License」——license="MIT" 已是 SPDX 表达式（PEP 639），
+    # 再写 license classifier 会让 setuptools 构建报 InvalidConfigError
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Utilities",
+]
 dependencies = []  # core is intentionally zero-dependency
 
 [project.optional-dependencies]
@@ -16,13 +29,15 @@ dependencies = []  # core is intentionally zero-dependency
 serve = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
-    "httpx2>=2.0",  # fastapi.testclient 依赖（新版 fastapi 要求）
+    "httpx2>=2.0",     # fastapi.testclient 依赖（新版 fastapi 要求）
+    "qrcode>=7.3",     # iLink 绑定二维码 SVG 生成（缺了 WebUI 二维码退化文本链接）
 ]
 # 兼容别名：0.1.1 及以前文档用 [wechat]，保留以免旧命令升级时报错
 wechat = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "httpx2>=2.0",
+    "qrcode>=7.3",
 ]
 dev = [
     "pytest>=8.0",

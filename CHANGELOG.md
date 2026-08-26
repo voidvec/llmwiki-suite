@@ -24,6 +24,35 @@
 - extras 更名：`[wechat]` → `[serve]`（该依赖组实际驱动所有通道的 `llmwiki serve`，不再单指微信）；`[wechat]` 保留为兼容别名。
 - 版本 0.1.1 → 0.1.2（发布新 extras 元数据）。
 
+## [0.1.3] - 2026-08-26
+
+### 新增
+- categories 增量语义：`llmwiki.toml` 的 `[categories].allowed` 改为在套件默认词表
+  **之上追加**（合并去重），不再整体替换——写少类别不丢默认类别（如「导航索引」）；
+  如需白名单模式（整体替换），设 `[categories].replace_default = true`。
+- `llmwiki categories-sync`：从 `kb-index.json` 派生全部**实际使用中**的类别，
+  `--apply` 写回 `llmwiki.toml`（文本级最小改写，保留注释/其它节）。
+- `llmwiki lint --sync-vocab`：巡检时自动把索引派生词表并入生效词表（仅本次校验，
+  不持久化），categories 漏收自愈。
+- `llmwiki eval` 双兜底：库根无 `eval_queries.json` 时回退套件内置示例集并在报告
+  `meta.queries_is_builtin` 标记；索引缺失时返回退出码 1 并给出 `llmwiki index` 指引
+  （不再裸抛 `FileNotFoundError`）。
+- 锚点双段比对：`heading_exists` 新增宽松 `anchor_slug`（剥离 emoji、`第 N 步` /
+  `步骤 N` / `Step N` / 纯数字序号前缀、折叠 `.`/`-`/空格），修复
+  `#1-概述 ↔ ## 1. 📖 概述`、`#2-生成-github-pat ↔ 步骤 1：生成 GitHub PAT`
+  这类真实库高频错配（真实库误报 199 → 24）。
+- `qrcode` 依赖补入 `[serve]`（iLink 绑定二维码 SVG 生成）。
+- `pyproject.toml` 补 `classifiers`（3.11–3.14 / OS Independent / Topic）。
+- CI 矩阵新增 Python 3.14。
+
+### 变更
+- 版本 0.1.2 → 0.1.3。
+
+### 修复
+- `gh_slug` 补删 `+＊*` 等半角/全角标点，避免 `C++` 类锚点误判。
+- `anchor_slug` 序号正则覆盖「数字在序数词前」形态（`步骤 N` / `Step N`）与
+  「第 N」空格变体（`第 1 步`）。
+
 ## [0.1.1] - 2026-08-25
 
 ### 新增

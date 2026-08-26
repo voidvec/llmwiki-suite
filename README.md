@@ -67,6 +67,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki index` | 生成 BM25 + wikilink 图检索索引（`kb-index.json`） |
 | `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后基于召回结果生成完整回答 |
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
+| `llmwiki categories-sync` | 从索引派生全部实际类别并写回 `llmwiki.toml`（`--apply` 写入） |
 | `llmwiki eval` | 用内置评估集跑 recall@k / MRR |
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |
 

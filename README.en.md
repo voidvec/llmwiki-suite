@@ -68,6 +68,7 @@ subsets with diagnostics), `llmwiki serve` (HTTP chat bridge, needs `serve` extr
 | `llmwiki index` | Build BM25 + wikilink-graph retrieval index (`kb-index.json`) |
 | `llmwiki query "..."` | Retrieve most relevant sections; generate a full answer when `LLM_WIKI_API_KEY` is set |
 | `llmwiki lint` | Checks: broken links, vocab violations, naming conventions |
+| `llmwiki categories-sync` | Derive all categories actually used and write back to `llmwiki.toml` (`--apply` to write) |
 | `llmwiki eval` | Run recall@k / MRR against a built-in eval set |
 | `llmwiki serve` | Start FastAPI bridge (`/chat` `/recall` `/healthz`) |
 

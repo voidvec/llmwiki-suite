@@ -8,7 +8,7 @@
   llmwiki query    召回 / 问答（配置 LLM_WIKI_API_KEY 后生成完整回答）
   llmwiki lint     巡检：断链 / 词表 / 命名
   llmwiki eval     评估召回质量（recall@k / MRR）
-  llmwiki serve    启动 HTTP 桥接服务（需 extras: llmwiki[wechat]）
+  llmwiki serve    启动 HTTP 桥接服务（需 extras: llmwiki[serve]）
 
 所有命令支持 `--repo <path>` 覆盖 CWD（D3 解析链：--repo → CWD 向上找 .git → 报错）。
 """
@@ -232,7 +232,7 @@ def cmd_serve(args) -> int:
 
     注意：`pip install llmwiki-suite`（不带 extras）**不会**装入
     fastapi/uvicorn，所以要跑微信/企业微信通道，必须安装带 wechat extra：
-        pip install "llmwiki-suite[wechat]"
+        pip install "llmwiki-suite[serve]"
     这里采用「延迟导入」（见下方 try/except）：
       - 没装 extras 时：命令友好报错并提示安装命令，不影响其它子命令；
       - 已装 extras 时：正常启动服务。
@@ -242,7 +242,7 @@ def cmd_serve(args) -> int:
         import uvicorn
     except ImportError as e:
         print(f"[serve] 缺少通道依赖: {e}\n"
-              f"       请安装: pip install \"llmwiki-suite[wechat]\"", file=sys.stderr)
+              f"       请安装: pip install \"llmwiki-suite[serve]\"", file=sys.stderr)
         return 1
     print(f"[serve] LlmWiki bridge on {args.host}:{args.port}  (Ctrl+C 退出)")
     uvicorn.run(app, host=args.host, port=args.port)

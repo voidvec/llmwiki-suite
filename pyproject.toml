@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmwiki-suite"
-version = "0.1.1"
+version = "0.1.2"
 description = "LLM-compiled personal wiki toolkit: BM25 + wikilink-graph recall, lint, and chat channels over plain Markdown notes."
 readme = "README.md"
 license = "MIT"
@@ -12,12 +12,21 @@ requires-python = ">=3.11"
 dependencies = []  # core is intentionally zero-dependency
 
 [project.optional-dependencies]
+# serve = llmwiki serve 的运行时依赖（所有通道共用：微信/企微/飞书/Telegram）
+serve = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "httpx2>=2.0",  # fastapi.testclient 依赖（新版 fastapi 要求）
+]
+# 兼容别名：0.1.1 及以前文档用 [wechat]，保留以免旧命令升级时报错
 wechat = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
+    "httpx2>=2.0",
 ]
 dev = [
     "pytest>=8.0",
+    "pre-commit>=3.0",
 ]
 
 [project.scripts]

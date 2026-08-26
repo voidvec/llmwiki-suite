@@ -1,8 +1,7 @@
-# 飞书 / Telegram 通道验证手册
+# 飞书 / Telegram 通道 · 本地验证手册
 
-> 目标：在你自己的环境里，端到端验证 llmwiki 的飞书（Feishu）与 Telegram 通道
-> 是否真正可用——**不用等真实消息**，用 `curl` 模拟回调即可先验一半；
-> 再走真实平台命令打通另一半。
+> 只讲**本机验证**：不依赖真实消息，用 `curl` 模拟平台回调，即可确认
+> 飞书（Feishu）与 Telegram 通道在本机 serve 里正确接通。
 
 ---
 
@@ -10,7 +9,7 @@
 
 ```bash
 # ① 装渠道版（或已有 editable 安装，新增 adapter 已热载）
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 
 # ② 配置 LLM（OpenAI 兼容；至少给 KEY）
 export LLM_WIKI_API_KEY="sk-xxx"
@@ -18,25 +17,28 @@ export LLM_WIKI_BASE_URL="https://api.openai.com/v1"
 export LLM_WIKI_MODEL="gpt-4o-mini"
 
 # ③ 库路径（默认当前目录，或用 --repo）
-cd /d/work/development/Repos/docs/llmwiki-suite
+cd /d/work/development/Repos/docs/llmwiki-suite   # 换成你自己的 llmwiki-suite 路径
 ```
 
 ---
 
-## 2. 启动 serve（含飞书 / Telegram 装配）
+## 1. 启动 serve（含飞书 / Telegram 装配）
 
 ```bash
-# 先配置通道凭据（任一缺失则该通道不注册路由）
+# 先配置通道凭据（注意：路由始终注册，缺凭据只影响 configured 状态与应答）
 export LLM_WIKI_FEISHU_APP_ID="cli_xxxxxxxx"
 export LLM_WIKI_FEISHU_APP_SECRET="xxxxxxxx"
-export LLM_WIKI_FEISHU_VERIFY_TOKEN="my_verify_token"   # 可选
+export LLM_WIKI_FEISHU_VERIFY_TOKEN="my_verify_token"   # 可选（事件签名校验用）
 
 export LLM_WIKI_TELEGRAM_BOT_TOKEN="123456:ABC-xxxx"
-export LLM_WIKI_TELEGRAM_SECRET_TOKEN="my_secret"         # 可选
+export LLM_WIKI_TELEGRAM_SECRET_TOKEN="my_secret"         # 可选（回调鉴权用）
 
 # 启动
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
+
+> 用命令行的 `export` 只在当前 shell 生效；**PowerShell 用 `$env:LLM_WIKI_FEISHU_APP_ID="cli_xxx"`**。
+> 每次改完 env 后**不需要重启 serve**——adapter 在请求时动态读 env（热启停）。
 
 启动后访问 `http://127.0.0.1:8000/healthz`，应看到各通道状态：
 
@@ -45,13 +47,28 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | feishu | ✅（两个变量都在） | ✅ |
 | telegram | ✅ | ✅ |
 
-> 若某个 `LLM_WIKI_*` 未配，对应项应显示 `configured: false`、路由不注册。
+> **注意**：路由始终注册（`enabled: true`），未配的通道显示 `configured: false`，
+> 调用其回调端点会返回可读 `hint`（而不是 404）——例如
+> `{"hint":"配置 LLM_WIKI_TELEGRAM_BOT_TOKEN 后实现应答", ...}`。
+> 这是有意设计：`serve` 进程内改 env 即可热启用通道，无需重启。原文「未配则不注册路由」已过时。
+
+### BRIDGE_TOKEN（本地验证可忽略）
+
+`LLM_WIKI_BRIDGE_TOKEN` 只保护 `/chat`、`/recall` 问答接口；**不涉及飞书 /
+Telegram 回调**（回调端点不走这个守卫）。本地只验证通道时不用管它；若宿主环境
+残留了该变量（`/healthz` 显示 `bridge_token: true`）并想测问答，才需要在**当前
+命令行**临时清空：
+
+```bash
+unset LLM_WIKI_BRIDGE_TOKEN        # Linux / macOS
+Remove-Item Env:LLM_WIKI_BRIDGE_TOKEN   # PowerShell（当前会话）
+```
 
 ---
 
-## 3. 本地模拟验证（不触网，最快）
+## 2. 本地模拟验证（不触网，最快）
 
-### 3.1 飞书 —— challenge 校验（平台接入前的敲门砖）
+### 2.1 飞书 —— challenge 校验（平台接入前的敲门砖）
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/feishu/callback \
@@ -60,7 +77,7 @@ curl -s -X POST http://127.0.0.1:8000/feishu/callback \
 # 期望: {"challenge":"ch_abc123"}  ← 返回原文即通过（飞书开放平台也能判定成功）
 ```
 
-### 3.2 飞书 —— 带签名校验的文本事件（模拟真实事件）
+### 2.2 飞书 —— 带签名校验的文本事件（模拟真实事件）
 
 ```bash
 # 用一个 Python 脚本拼正确签名（因为要对 body 做 HMAC）
@@ -68,29 +85,37 @@ python - <<'PY'
 import hmac, hashlib, json, time
 import urllib.request
 
-def sign(ts, nonce, body, secret):   # 与 feishu_adapter._verify_signature 一致
-    s = f"{ts}{nonce}{secret}\n{body}"
-    return "v1_ck_" + hmac.new(s.encode(), s.encode(), hashlib.sha256).hexdigest()[-32:].zfill(32)
+def sign(ts, nonce, body, secret):   # 与 feishu_adapter._verify_signature 一致（先排序拼接再 HMAC）
+    s = "".join(sorted([secret, ts, nonce, body]))
+    return hmac.new(secret.encode(), s.encode(), hashlib.sha256).hexdigest()
 
-ts = str(int(time.time())); nonce = "n123"; body = json.dumps({
-  "schema":"2.0","type":"event_callback","header":{},
+ts = str(int(time.time())); nonce = "n123"
+body_obj = {
+  "schema":"2.0","type":"event_callback","header":{
+    "timestamp": ts, "nonce": nonce},   # 验签用 header 里的 ts/nonce
   "event":{"chat_id":"oc_demo","message":{"message_type":"text",
            "content":json.dumps({"text":"LLM_WIKI 自检：你是谁？"})}}
-})
-secret = "your_verify_token"
-sig = sign(ts, nonce, secret, body)
+}
+body = json.dumps(body_obj).encode()      # 先组装 JSON 字符串，再编码为 UTF-8 字节
+
+secret = "your_verify_token"            # 与 LLM_WIKI_FEISHU_VERIFY_TOKEN 一致
+sig = sign(ts, nonce, body, secret)
 req = urllib.request.Request(
   "http://127.0.0.1:8000/feishu/callback",
-  data=body.encode(), method="POST",
+  data=body, method="POST",
   headers={"Content-Type":"application/json",
            "X-Lark-Signature":sig,"X-Lark-Request-Timestamp":ts,"X-Lark-Request-Nonce":nonce})
 print(urllib.request.urlopen(req).status)  # 期望 200
 PY
 ```
 
-> 若未设 `FEISHU_VERIFY_TOKEN`，飞书事件可不用签名直接 POST（server 仅走可选校验）。
+> **签名一致性**：adapter 用「原始 request body 的 UTF-8 字节」+ 对
+> `[verify_token, timestamp, nonce, body]` 先排序拼接、再 HMAC-SHA256（hex 小写）。
+> 脚本里务必**先 `json.dumps` 得到字符串、再 `.encode()`**——请求体、签名用的
+> `body` 必须同字节，否则验签必失败。若未设 `FEISHU_VERIFY_TOKEN`，飞书事件可
+> 不用签名直接 POST（server 仅走可选校验）。
 
-### 3.3 Telegram —— 文本消息事件注入（验证回环）
+### 2.3 Telegram —— 文本消息事件注入（验证回环）
 
 ```bash
 # 无 secret token 时（未设 TELEGRAM_SECRET_TOKEN）：
@@ -109,9 +134,12 @@ curl -s -X POST http://127.0.0.1:8000/telegram/callback \
 
 ---
 
-## 4. 真实平台验证（打通外部）
+## 附录：公网接线（本地验证通过后的可选扩展）
 
-### 4.1 Telegram（最简单）
+> 以下**不是本机验证必需**；接公网涉及域名、反代、平台后台，需要时再看。
+> 本地验证只需第 1-2 节即可完成。
+
+### A.1 Telegram（最简单）
 
 ```bash
 # ① 设好 webhook（把回调指到你的公网 HTTPS 地址）
@@ -127,7 +155,7 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 # ③ 直接在 Telegram 应用里给 bot 发消息 → 应收到知识库回答（带来源）
 ```
 
-### 4.2 飞书
+### A.2 飞书
 
 ```bash
 # ① 飞书开放平台 → 应用 → 事件订阅 → 请求地址
@@ -139,22 +167,20 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 
 ---
 
-## 5. 常见问题
+## 3. 常见问题
 
 | 现象 | 原因 | 解法 |
 |------|------|------|
 | `/healthz` 里 feishu 显示 not configured | `FEISHU_APP_ID` 或 `FEISHU_APP_SECRET` 缺配 | 补全 env 后重启 serve |
-| 飞书 challenge 返回非原文 | 回调地址填错 / 端口不通 | 先用第 3 节本地 curl 验证 |
+| 飞书 challenge 返回非原文 | 回调地址填错 / 端口不通 | 先用第 2 节本地 curl 验证 |
 | Telegram 返回 200 但 bot 不回复 | webhook 未设 / secret token 不对 | `getWebhookInfo` 看并发；核对 header |
 | 报 `cannot unpack non-iterable` | 测试替身 mock 结构不对 | 用真实 `assistant`（本文档场景不会出现） |
 
 ---
 
-## 6. 验收清单
+## 4. 验收清单（本地）
 
 - [ ] `serve` 启动无异常，`/healthz` 显示 feishu+telegram configured ✅
 - [ ] 飞书 challenge 本地 curl 返回原文
 - [ ] 飞书带签名字段事件 POST 200
-- [ ] Telegram 无 secret 回调 200；错 secret → 403
-- [ ] 真实 Telegram webhook 设置成功，BotFather 发消息能收到回答
-- [ ] 真实飞书事件订阅通过，发送消息返回回答（含来源）
+- [ ] 无 secret token 的 Telegram 回调 POST 200；错误 secret → 403

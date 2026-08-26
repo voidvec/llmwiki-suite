@@ -1,5 +1,7 @@
 # llmwiki-suite
 
+> 🌐 English · [中文](README.md)
+
 [![PyPI version](https://img.shields.io/pypi/v/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![Python](https://img.shields.io/pypi/pyversions/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml)
@@ -23,7 +25,7 @@ WeChat channel.
 
 ```bash
 # Recommended: everything (core + WeChat/WeCom bridge fastapi/uvicorn)
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 
 # Lightweight: core only (ingest/index/query/lint/eval, zero third-party deps)
 # pip install llmwiki-suite
@@ -33,10 +35,15 @@ Requires Python >= 3.11.
 
 ### Local development install (from source)
 
+Use a project-level virtualenv (mirrors CI, keeps deps isolated):
+
 ```bash
 git clone https://github.com/voidvec/llmwiki-suite.git
 cd llmwiki-suite
-pip install -e .                 # or pip install -e ".[wechat]"
+python -m venv .venv
+# Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
+pip install -e ".[wechat,dev]"       # all channels + test/pre-commit deps
+pre-commit install                   # optional but recommended
 ```
 
 ## Five steps to onboard your notes
@@ -50,7 +57,7 @@ llmwiki query "..."    # 5. retrieve / Q&A
 ```
 
 Optional: `llmwiki lint` (broken links/vocab), `llmwiki eval` (score low-quality
-subsets with diagnostics), `llmwiki serve` (HTTP chat bridge, needs `wechat` extras).
+subsets with diagnostics), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
 
 ## Commands
 
@@ -66,26 +73,40 @@ subsets with diagnostics), `llmwiki serve` (HTTP chat bridge, needs `wechat` ext
 
 All commands accept `--repo <path>` to target a specific knowledge base (default: current dir).
 
-## WeChat channel (personal WeChat / WeCom)
+## Channels (WeChat / WeCom / Feishu / Telegram)
 
-Wire your knowledge base to WeChat with `llmwiki serve`:
+Wire your knowledge base to instant messaging with `llmwiki serve`:
 
 ```bash
 # ① channel edition installed already; otherwise install extras
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 
 # ② configure the LLM (OpenAI-compatible endpoint; KEY alone defaults to OpenAI)
 export LLM_WIKI_API_KEY="sk-xxx"
 export LLM_WIKI_BASE_URL="https://api.openai.com/v1"        # default OpenAI
 export LLM_WIKI_MODEL="gpt-4o-mini"                          # default gpt-4o-mini
 
-export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # recommended: protect /chat, /recall
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # optional: protect the Q&A endpoint (can ignore for local channel testing)
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
 - **Personal WeChat (recommended):** open `http://127.0.0.1:8000/ilink/webui` in a
   browser, scan the QR with your phone WeChat, and chat with the bot directly.
 - **WeCom:** set the `LLM_WIKI_WECOM_*` env vars to enable callback/push channels.
+- **Feishu (Lark):** set `LLM_WIKI_FEISHU_APP_ID` / `LLM_WIKI_FEISHU_APP_SECRET`
+  (optionally `LLM_WIKI_FEISHU_VERIFY_TOKEN` for event signature verification);
+  in the Feishu open platform point the event-subscription callback URL at
+  `https://<your-domain>/feishu/callback` (the challenge is answered automatically).
+- **Telegram:** create a bot with @BotFather, set `LLM_WIKI_TELEGRAM_BOT_TOKEN`,
+  and point the webhook at `https://<your-domain>/telegram/callback`
+  (`setWebhook`; `LLM_WIKI_TELEGRAM_SECRET_TOKEN` optionally guards the callback).
+
+> **Routes are always registered**: at startup the bridge unconditionally mounts all
+> four channel routes (`/ilink/*`, `/wecom/*`, `/feishu/callback`, `/telegram/callback`);
+> missing credentials return a readable `hint` (no 404). Check each channel's
+> `configured / enabled` status at `http://127.0.0.1:8000/healthz`. Channel callbacks
+> do not use `LLM_WIKI_BRIDGE_TOKEN`. Telegram webhook needs a public-facing URL
+> (frp / ngrok / Tencent Cloud Lighthouse reverse-proxy to 8000).
 
 ### Switching LLM providers / models (any OpenAI-compatible protocol)
 
@@ -106,8 +127,9 @@ The toolkit only calls OpenAI-compatible `/chat/completions` — it ignores vend
 ## Configuration & secrets
 
 - **Knowledge base config**: `<kb>/llmwiki.toml` (categories vocab, exclude dirs, model name... — no secrets)
-- **Secrets**: environment variables only (`LLM_WIKI_API_KEY`, `LLM_WIKI_BRIDGE_TOKEN`,
-  `LLM_WIKI_WECOM_*`, `LLM_WIKI_ILINK_*`). This toolkit never reads `.env` files.
+- **Secrets**: environment variables only (`LLM_WIKI_API_KEY`, `LLM_WIKI_BRIDGE_TOKEN` (optional),
+  `LLM_WIKI_WECOM_*`, `LLM_WIKI_ILINK_*`, `LLM_WIKI_FEISHU_*`,
+  `LLM_WIKI_TELEGRAM_*`). This toolkit never reads `.env` files.
 
 ## Documentation
 
@@ -120,6 +142,7 @@ All docs live in `docs/`, organized entry → advanced → reference:
 | `docs/llmwiki-tutorial-02-channel.md` | Channels: WeChat / WeCom bridge, serve deployment |
 | `docs/llmwiki-tutorial-03-quality-tuning.md` | Retrieval tuning: eval sets, diagnosis, parameter tuning |
 | `docs/llmwiki-eval.md` | **Command reference**: eval CLI options, eval-set schema, report fields, metrics |
+| `docs/llmwiki-evolution-roadmap.md` | **Roadmap**: from passive Q&A to a self-evolving knowledge base (L0→L3) |
 | `docs/llmwiki-architecture.md` | System architecture: layered design, channel abstraction |
 | `docs/obsidian-guide.md` | Optional: use Obsidian as frontend editor |
 | `docs/pypi-release-guide.md` | Maintainers: PyPI publishing guide (register / 2FA / token / twine) |

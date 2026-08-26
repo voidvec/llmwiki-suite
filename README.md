@@ -18,12 +18,13 @@
 
 ## 安装
 
-> 已在 PyPI 发布。**推荐直接装带微信渠道的版本**（一条命令搞定核心 + 全部功能）；
+> 已在 PyPI 发布。**推荐直接装 `serve` 版**（核心 + 跑 `llmwiki serve` 需要的
+> fastapi/uvicorn，也是所有通道——微信/企微/飞书/Telegram 共用的运行时）；
 > 只看检索/巡检则装核心版即可（零依赖）。
 
 ```bash
-# 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道 fastapi/uvicorn）
-pip install "llmwiki-suite[wechat]"
+# 推荐：一条命令装好【全部能力】（核心 + 通道时代 fastapi/uvicorn）
+pip install "llmwiki-suite[serve]"
 
 # 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
 # pip install llmwiki-suite
@@ -33,10 +34,15 @@ pip install "llmwiki-suite[wechat]"
 
 ### 本地开发安装（源码）
 
+推荐在**项目级虚拟环境**中安装（与 CI 同构、依赖隔离）：
+
 ```bash
 git clone https://github.com/voidvec/llmwiki-suite.git
 cd llmwiki-suite
-pip install -e .                 # 或带微信通道：pip install -e ".[wechat]"
+python -m venv .venv
+# Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
+pip install -e ".[wechat,dev]"       # 全部通道 + 测试/pre-commit 依赖
+pre-commit install                   # 注册仓库级钩子（可选但推荐）
 ```
 
 ## 五步接入你已有的笔记库
@@ -50,7 +56,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 ```
 
 可选：`llmwiki lint`（巡检断链/词表）、`llmwiki eval`（评估低质量子集并输出诊断）、
-`llmwiki serve`（启动 HTTP 问答服务，需 `wechat` extras）。
+`llmwiki serve`（启动 HTTP 问答服务，需 `serve` extras）。
 
 ## 命令一览
 
@@ -72,14 +78,14 @@ llmwiki query "..."    # 5. 检索 / 问答
 
 ```bash
 # ① 已装渠道版则直接可用；否则先补装渠道依赖
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 
 # ② 配置 LLM（OpenAI 兼容端点；只设 KEY 时默认走 OpenAI）
 export LLM_WIKI_API_KEY="sk-xxx"
 export LLM_WIKI_BASE_URL="https://api.openai.com/v1"        # 不设则默认 OpenAI
 export LLM_WIKI_MODEL="gpt-4o-mini"                          # 不设则默认 gpt-4o-mini
 
-export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # 建议：保护 /chat、/recall
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # 可选：保护问答接口（本地验证通道可忽略）
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
@@ -94,8 +100,10 @@ llmwiki serve --host 127.0.0.1 --port 8000
   把 webhook 设到 `https://<你的域名>/telegram/callback`
   （`setWebhook`；可用 `LLM_WIKI_TELEGRAM_SECRET_TOKEN` 做回调鉴权）。
 
-> 三个外部通道默认**不启用**，只有对应 `LLM_WIKI_*` 环境变量配置齐全才会
-> 在 `serve` 启动时注册路由（`/healthz` 会列出各通道 `enabled/configured` 状态）。
+> **路由总是注册**：`serve` 启动时四条通道的路由（`/ilink/*`、`/wecom/*`、
+> `/feishu/callback`、`/telegram/callback`）无条件挂载，缺凭据时返回可读的
+> `hint`（不会 404）。可通过 `http://127.0.0.1:8000/healthz` 查看各通道
+> `configured / enabled` 状态。通道回调用不到 `LLM_WIKI_BRIDGE_TOKEN`。
 > Telegram webhook 需要公网可达地址（可用 frp / ngrok / 腾讯云轻量等反代到 8000）。
 
 ### 换 LLM 厂商 / 模型（OpenAI 兼容协议即可）
@@ -117,7 +125,7 @@ llmwiki serve --host 127.0.0.1 --port 8000
 ## 配置与密钥
 
 - **库配置**：库根 `llmwiki.toml`（categories 词表、排除目录、模型名等非密钥项）
-- **密钥**：只走环境变量（`LLM_WIKI_API_KEY`、`LLM_WIKI_BRIDGE_TOKEN`、
+- **密钥**：只走环境变量（`LLM_WIKI_API_KEY`、`LLM_WIKI_BRIDGE_TOKEN`（可选）、
   `LLM_WIKI_WECOM_*`、`LLM_WIKI_ILINK_*`、`LLM_WIKI_FEISHU_*`、
   `LLM_WIKI_TELEGRAM_*`），本套件不读取任何 `.env` 文件
 

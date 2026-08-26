@@ -62,7 +62,7 @@ LLMWiki 源自 Andrej Karpathy 提出的 **「用 LLM 持续编译一份个人 w
 
 ```bash
 # 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道 fastapi+uvicorn）
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 
 # 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
 # pip install llmwiki-suite

@@ -56,19 +56,19 @@ Telegram ────────Webhook(setWebhook)─► TelegramAdapter┘
 
 > 若 `kb-index.json` 缺失，先跑 `llmwiki index` 重建。
 
-### 1.2 安装依赖（wechat extras）
+### 1.2 安装依赖（serve extras）
 
-> 说明：`[wechat]` extra 自动带上 fastapi + uvicorn；若之前只装了核心版（`llmwiki-suite`），
+> 说明：`[serve]` extra 自动带上 fastapi + uvicorn；若之前只装了核心版（`llmwiki-suite`），
 > 直接执行下面命令补装即可（会升级为完整包，无需重装核心）。
 
 ```bash
 # bash（Linux / macOS）
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 ```
 
 ```powershell
 # Windows（PowerShell / Git Bash 同理）
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 ```
 
 - `fastapi` / `uvicorn`：对外 HTTP 服务（必需）。
@@ -341,7 +341,7 @@ curl -F "url=https://<你的域名>/telegram/callback" \
 
 ```bash
 # 终端 1：装依赖 + 起服务
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 export LLM_WIKI_API_KEY="sk-xxxx"; export LLM_WIKI_BRIDGE_TOKEN="my-secret"; export LLM_WIKI_ENABLE_ILINK="1"
 cd ~/my-notes && llmwiki serve --host 127.0.0.1 --port 8000
 

@@ -26,7 +26,7 @@ version: "1.0"
 
 ```bash
 # 推荐：一条命令装好【全部能力】（核心 + 微信/企业微信通道）
-pip install "llmwiki-suite[wechat]"
+pip install "llmwiki-suite[serve]"
 
 # 轻量：只装核心（ingest / index / query / lint / eval，零第三方依赖）
 # pip install llmwiki-suite
@@ -34,8 +34,8 @@ pip install "llmwiki-suite[wechat]"
 
 要求 Python ≥ 3.11（内置 `tomllib` 的下限）。安装后命令是 **`llmwiki`**（注意：包名是 `llmwiki-suite`，PyPI 上 `llmwiki` 已被其他项目占用）。
 
-> **锁定已验证版本**（推荐给远端/生产）：`pip install "llmwiki-suite[wechat]==0.1.0"`。
-> 升级：`pip install -U "llmwiki-suite[wechat]"`。
+> **锁定已验证版本**（推荐给远端/生产）：`pip install "llmwiki-suite[serve]==0.1.0"`。
+> 升级：`pip install -U "llmwiki-suite[serve]"`。
 
 验证：
 
@@ -96,7 +96,7 @@ llmwiki lint
 ## 第 4 步（可选）：接入微信 / 企业微信
 
 ```bash
-pip install "llmwiki-suite[wechat]"     # 若第 0 步未带 [wechat]，这一步补装即可
+pip install "llmwiki-suite[serve]"     # 若第 0 步未带 [serve]，这一步补装即可
 cd ~/mykb
 # 指定 LLM（OpenAI 兼容端点）。只设 key 时默认走 OpenAI gpt-4o-mini；
 # 换 DeepSeek/通义/Kimi/Ollama 等只需把 base_url + model 一起设（详见 tutorial-02 §2.1）
@@ -121,8 +121,8 @@ llmwiki serve --host 127.0.0.1 --port 8000
 # 1. 环境
 python -m venv .venv && source .venv/bin/activate    # Linux/macOS
 # 或 Windows: python -m venv .venv; .venv\Scripts\activate
-pip install "llmwiki-suite[wechat]"     # 推荐：一条装好核心 + 渠道依赖
-# 或轻量版: pip install llmwiki-suite（后续要跑 serve 再补 [wechat]）
+pip install "llmwiki-suite[serve]"     # 推荐：一条装好核心 + 渠道依赖
+# 或轻量版: pip install llmwiki-suite（后续要跑 serve 再补 [serve]）
 
 # 2. 进入他们已有的笔记目录（git 仓库或裸目录均可）
 cd ~/their-notes
@@ -131,7 +131,7 @@ llmwiki ingest        # 先 dry-run 预览，再 --apply 真正写入
 llmwiki index         # 建 kb-index.json
 llmwiki query "随便问"   # 检索/问答
 llmwiki lint          # 健康巡检
-llmwiki serve         # 要跑 HTTP 服务时（已装 [wechat] 则直接可用）
+llmwiki serve         # 要跑 HTTP 服务时（已装 [serve] 则直接可用）
 ```
 
 要点：
@@ -144,7 +144,7 @@ llmwiki serve         # 要跑 HTTP 服务时（已装 [wechat] 则直接可用�
 | **私有仓库反向依赖** | PyPI 包公开可装（无需认证）；只有想从源码安装（`git clone` + `pip install .`）才需访问私有仓库的权限 |
 | **CI/pre-commit** | `llmwiki init` 拷入的 `.github/workflows/kb-lint.yml` 与 `.pre-commit-config.yaml` 已内置上游安装命令，双端（新建/既有仓库）共用 |
 | **其它库迁移历史** | 别的库没有 `_deprecated/` 那些旧引擎，无需迁移；**不存在「必须带旧文件才能跑」** |
-| **升级** | 改完套件跑 `pip install -U "llmwiki-suite[wechat]"` 即升级到最新 PyPI 版 |
+| **升级** | 改完套件跑 `pip install -U "llmwiki-suite[serve]"` 即升级到最新 PyPI 版 |
 
 ---
 

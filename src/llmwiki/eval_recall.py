@@ -39,6 +39,46 @@ def load_queries(path: str) -> dict:
         return json.load(f)
 
 
+# Ingest 文件名归一化规则（与 ingest.py normalize_token 对齐）：
+# 全角冒号 `：` → `-`（ingest 处理的核心重命名），加上少数标点的一致性。
+_INGEST_PATH_NORM = [
+    ("：", "-"),   # 全角冒号 → 连字符
+    ("；", ";"),
+    ("，", ","),
+    ("（", "("),
+    ("）", ")"),
+]
+
+
+def _resolve_expected_paths(expected: list[str], index_docs: list[dict]) -> list[str]:
+    """把 eval_queries.json 中的 expected 路径解析为**索引中真实存在**的路径。
+
+    背景：ingest 会对文件名做归一化（全角 `：`→`-` 等）。若改名后 eval_queries.json
+    的 expected 未同步，精确字符串比对就会静默 drop 全部命中，造成"检索变差了"的
+    假象（2026-08-27 实战：8 条 Drogon 复用旧路径 → recall 86% → 改对后 100%）。
+    这里对每个 expected：
+      1. 已在索引（精确命中）→ 原样保留
+      2. 不在 → 尝试 ingest 归一化变体（全角→半角等）重新匹配；命中则替换为索引路径
+      3. 仍不命中 → 保留原值（当 miss 处理，真实检索问题不掩盖）
+    """
+    if not index_docs:
+        return expected
+    real = {d.get("path") for d in index_docs}
+    out = []
+    for e in expected:
+        if e in real:
+            out.append(e)
+            continue
+        cand = e
+        for old, new in _INGEST_PATH_NORM:
+            cand = cand.replace(old, new)
+        if cand in real:
+            out.append(cand)
+        else:
+            out.append(e)
+    return out
+
+
 def run_eval(retriever: KbRetriever, queries: dict, top_k: int,
              min_score: float) -> list[dict]:
     """对每条 query 跑 recall，返回逐条结果（含 rank / top hits）。"""
@@ -279,6 +319,21 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
                             alias_groups=cfg.alias_groups,
                             min_score_per_term=cfg.min_score_per_term,
                             link_gate=cfg.link_gate)
+    # 用索引真实路径对 expected 做重定向（ingest 改名后自动跟随，避免假 miss）
+    # 仅当 retriever 暴露索引文档（真 KbRetriever）时生效；假/fake 对象安全跳过
+    idx_docs = getattr(retriever, "docs", None) or []
+    resolved = 0
+    for q in queries["queries"]:
+        old_exp = q.get("expected", [])
+        if not old_exp:
+            continue
+        new_exp = _resolve_expected_paths(old_exp, idx_docs)
+        if new_exp != old_exp:
+            resolved += 1
+            q["expected"] = new_exp
+    if resolved:
+        print(f"[eval] ⚠ {resolved} 条 expected 路径已按 ingest 归一化重定向（改名导致）",
+              file=sys.stderr)
     # P3：对过期索引做评估会得出错误结论，先告警并把状态记入 meta
     fr = retriever.freshness
     if fr is not None and fr.unknown:

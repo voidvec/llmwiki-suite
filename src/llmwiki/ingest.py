@@ -26,6 +26,7 @@ import datetime
 import json
 import os
 import sys
+import time
 import urllib.request
 
 from . import _env
@@ -113,18 +114,52 @@ def ensure_fm(text, rel):
 # LLM 元数据推断（可选；categories 必须 ∈ 受控词表，否则丢弃）
 # 凭证只走环境变量（LLM_BASE_URL / LLM_API_KEY / LLM_MODEL）。
 # --------------------------------------------------------------------------
-def infer_metadata(title, body, vocab, llm_base_url, llm_api_key, llm_model):
+# 每次 LLM 调用的网络超时（秒）；配合 llm_total_timeout 做全局熔断。
+_LLM_CALL_TIMEOUT = 30
+# 单次 ingest 的 LLM 总时长预算（秒）：超过后停止调用并提示，避免「卡住」假象。
+# 兼顾：串行调用大量文件时的可观测性 + 意外慢 API 的兜底。
+_LLM_TOTAL_TIMEOUT = float(
+    os.environ.get("LLM_WIKI_INGEST_LLM_TOTAL_TIMEOUT", "600"))
+
+
+def _needs_llm(fm) -> bool:
+    """该文档是否需要 LLM 推断？仅当存在「可补」的关键字段（categories/tags 为空）时为 True。
+
+    语义对齐 apply_inferred：categories 需要「当前为空」才能写入，
+    tags 也要求「当前为空」。两者都非空 → 无 LLM 可补，直接跳过（不发 API）。
+    """
+    if fm is None:
+        return False
+    cur_cats = fm.get("categories") or []
+    cur_tags = fm.get("tags") or []
+    return not cur_cats or not cur_tags
+
+
+def infer_metadata(title, body, vocab, llm_base_url, llm_api_key, llm_model,
+                   llm_stats=None):
+    """调用 LLM 推断标题/摘要的 categories/tags/description。
+
+    返回 dict（无 key 时 None）。任何异常都会静默降级为 None（分类助手不可用
+    不应阻断 ingest 主流程）。累计调用数 / 耗时写入 llm_stats（调用方自省用）。
+    """
     if not llm_api_key:
         return None
+    # 全局熔断：超时预算耗尽 → 跳过
+    elapsed = 0.0
+    if llm_stats is not None:
+        elapsed = time.monotonic() - llm_stats["start"]
+        if elapsed >= llm_stats["budget_total"]:
+            return None
     snippet = first_sentence(body, 400) or title
-    vocab_hint = "、".join(sorted(vocab)) if vocab else "（未知）"
+    vocab_hint = "(未知)" if not vocab else "、".join(sorted(vocab))
     prompt = (
-        "你是知识库分类助手。根据标题与摘要，输出 JSON："
+        "你是知识库提取助手。根据标题与摘要，输出 JSON："
         '{"categories": [属于受控词表的1-3个分类], "tags": [3-5个标签], '
         '"description": "一句话描述"}。\n'
-        "受控词表（categories 必须从中选取，勿自造）：%s\n"
+        "受控词表（categories 必须从中提取，勿自造）：%s\n"
         "标题：%s\n摘要：%s" % (vocab_hint, title, snippet)
     )
+    entry = time.monotonic()
     try:
         req = urllib.request.Request(
             llm_base_url + "/chat/completions",
@@ -135,7 +170,14 @@ def infer_metadata(title, body, vocab, llm_base_url, llm_api_key, llm_model):
                      "Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        # 单次调用超时 = min(默认30s, 剩余总预算)（保证总预算严格不被突破）
+        call_timeout = _LLM_CALL_TIMEOUT
+        if llm_stats is not None:
+            remain = llm_stats["budget_total"] - elapsed
+            if remain < call_timeout:
+                call_timeout = max(1.0, remain)
+            llm_stats["calls"] += 1
+        with urllib.request.urlopen(req, timeout=call_timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         content = data["choices"][0]["message"]["content"]
         # 抽取首个 JSON 对象
@@ -148,12 +190,21 @@ def infer_metadata(title, body, vocab, llm_base_url, llm_api_key, llm_model):
     return None
 
 
-def apply_inferred(text, rel, vocab, llm_base_url, llm_api_key, llm_model):
+def apply_inferred(text, rel, vocab, llm_base_url, llm_api_key, llm_model,
+                   llm_stats=None):
+    """用 LLM 推断并返回补全后的 text；无需补全 / 无 key / 无推断 → 原样返回。
+
+    关键：**只在确有可补字段（categories/tags 为空）时**才调用 LLM，
+    绝不空跑；调用前先用 _needs_llm 把关（避免无谓 API 消耗）。
+    """
     fm, body, raw = split_fm(text)
-    if fm is None:
+    if fm is None or not llm_api_key:
+        return text, []
+    if not _needs_llm(fm):
         return text, []
     title = fm.get("title") or os.path.splitext(os.path.basename(rel))[0]
-    meta = infer_metadata(title, body, vocab, llm_base_url, llm_api_key, llm_model)
+    meta = infer_metadata(title, body, vocab, llm_base_url, llm_api_key, llm_model,
+                          llm_stats=llm_stats)
     if not meta:
         return text, []
     changed = []
@@ -214,8 +265,16 @@ def _git_mv(repo, src, dst):
         pass
 
 
-def run_ingest(cfg: Config, apply=False, move=False, report=None):
-    """Ingest 主入口。返回计划文件数。"""
+def run_ingest(cfg: Config, apply=False, move=False, report=None, use_llm=True):
+    """Ingest 主入口。返回计划文件数。
+
+    LLM 推断策略（本次优化核心）：
+      - 只有文件**存在可补字段**（categories/tags 为空）才调用 LLM；
+      - 每个文件**最多一次** LLM 调用（计划阶段计算并缓存，执行阶段直接复用；
+        避免旧实现 apply 时 plan/exec 两段各调一次 = 双倍消耗）；
+      - 用 `llm_stats` 记录调用数与总时长；超过 `_LLM_TOTAL_TIMEOUT` 预算熔断；
+      - `use_llm=False`（或未配置 key）完全跳过 LLM，保证离线/秒级可用。
+    """
     repo = str(cfg.repo)
     llm_base_url = cfg.llm_base_url
     llm_api_key = _env.getenv("API_KEY", "")
@@ -228,6 +287,14 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
     for rel, doc in index["files"].items():
         h = sha256_text(doc["text"])
         hashes.setdefault(h, []).append(rel)
+
+    # LLM 调用状态（只统计真正发起的 API 请求）
+    llm_stats = {
+        "start": time.monotonic(),
+        "calls": 0,
+        "budget_total": _LLM_TOTAL_TIMEOUT,
+        "llm_active": bool(use_llm and llm_api_key),
+    }
 
     plan = []  # 每个文件的处理计划
     for rel, doc in sorted(index["files"].items()):
@@ -242,10 +309,15 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
         if added:
             actions.append({"type": "fm", "detail": "补齐字段 %s" % added})
             text = new_text
-        # LLM 推断（仅当 FM 已存在且 categories/tags 为空；dry-run 也会调用，注意配额）
-        if apply and llm_api_key:
+            # 若原文件无 FM，补全后重新解析（新建 FM 的 categories 为空 → 需要 LLM）
+            if fm is None:
+                fm, _, _ = split_fm(new_text)
+
+        # LLM 推断（仅 apply + key 存在 + 确有可补字段；每文件至多一次）
+        if apply and llm_stats["llm_active"] and _needs_llm(fm):
             new_text, changed = apply_inferred(
-                text, rel, vocab, llm_base_url, llm_api_key, llm_model)
+                text, rel, vocab, llm_base_url, llm_api_key, llm_model,
+                llm_stats=llm_stats)
             if changed:
                 actions.append({"type": "llm", "detail": "推断 %s" % changed})
                 text = new_text
@@ -269,10 +341,14 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
                 actions.append({"type": "suggest-move", "detail": "建议目录 %s" % sugg})
 
         if actions:
-            plan.append({"rel": rel, "actions": actions})
+            plan.append({"rel": rel, "text": text, "actions": actions})
 
     # 输出
     print("[ingest] 需处理文件：%d（dry-run=%s）" % (len(plan), not apply))
+    if llm_stats["llm_active"]:
+        elapsed = time.monotonic() - llm_stats["start"]
+        print("[ingest] LLM: 启用（%.1fs，%d 次调用，预算 %ds）"
+              % (elapsed, llm_stats["calls"], llm_stats["budget_total"]))
     for p in plan:
         print("  %s" % p["rel"])
         for a in p["actions"]:
@@ -282,6 +358,7 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
     report_data = {
         "generated_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "dry_run": not apply,
+        "llm_calls": llm_stats["calls"],
         "planned_files": len(plan),
         "plan": plan,
     }
@@ -297,26 +374,17 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
     for p in plan:
         rel = p["rel"]
         doc = index["files"][rel]
-        text = doc["text"]
-        # 重新计算（与上面一致，避免状态漂移）
-        new_text, added = ensure_fm(text, rel)
+        text = p["text"]  # 计划阶段的最终文本（含 FM 补全 + LLM 推断，已缓存）
         wrote = False
-        if added:
+        if doc["text"] != text:
             with open(os.path.join(repo, rel), "w", encoding="utf-8") as f:
-                f.write(new_text)
+                f.write(text)
             wrote = True
-        if llm_api_key:
-            new_text2, changed = apply_inferred(
-                new_text if wrote else text, rel, vocab,
-                llm_base_url, llm_api_key, llm_model)
-            if changed:
-                with open(os.path.join(repo, rel), "w", encoding="utf-8") as f:
-                    f.write(new_text2)
-                wrote = True
         rename_action = next((a for a in p["actions"] if a["type"] == "rename"), None)
         if rename_action:
             dst = rename_action["detail"].split(" -> ")[1]
-            _git_mv(repo, rel, dst)
+            if os.path.isfile(os.path.join(repo, rel)):
+                _git_mv(repo, rel, dst)
         # suggest-move 默认不执行；--move 时谨慎处理
         if move:
             mv = next((a for a in p["actions"] if a["type"] == "suggest-move"), None)
@@ -331,7 +399,7 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None):
     print("[ingest] 重建索引...")
     from .gen_index import gen_index
     gen_index(cfg.repo, cfg)
-    print("[ingest] 完成。")
+    print("[ingest] 完成（LLM 调用 %d 次）。" % llm_stats["calls"])
     return len(plan)
 
 

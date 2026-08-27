@@ -142,7 +142,8 @@ def cmd_ingest(args) -> int:
     from .ingest import run_ingest
     repo = resolve_repo(args.repo)
     cfg = load_config(repo)
-    run_ingest(cfg, apply=args.apply, move=args.move, report=args.report)
+    run_ingest(cfg, apply=args.apply, move=args.move, report=args.report,
+               use_llm=not args.no_llm)
     return 0
 
 
@@ -334,6 +335,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_repo_arg(sp)
     sp.add_argument("--apply", action="store_true", help="真正写入（默认 dry-run）")
     sp.add_argument("--move", action="store_true", help="--apply 时额外执行建议目录移动（谨慎）")
+    sp.add_argument("--no-llm", action="store_true",
+                    help="跳过 LLM 元数据推断（不配 key 时也无 LLM；配了想离线/秒级用则加）")
     sp.add_argument("--report", default=None)
     sp.set_defaults(func=cmd_ingest)
 

@@ -369,6 +369,12 @@ _CHAT_WEBUI_HTML = """<!doctype html>
   #msgs { flex:1; overflow-y:auto; padding:14px 16px; }
   .msg { max-width:760px; margin:2px auto 10px; padding:10px 14px; border-radius:8px;
          white-space:pre-wrap; word-wrap:break-word; line-height:1.65; font-size:14px; }
+  .msg p { margin:0 0 8px; }
+  .msg p:last-child { margin-bottom:0; }
+  .msg ul { margin:0 0 8px; padding-left:20px; }
+  .msg code { background:#f2f3f5; border-radius:3px; padding:0 4px;
+              font-size:12px; font-family:Consolas,Menlo,monospace; }
+  .msg strong { font-weight:600; }
   .user { background:#eef4ff; margin-left:auto; }
   .bot  { background:#fff; border:1px solid #e6e8eb; }
   .refs { max-width:560px; margin:-4px auto 14px; }
@@ -444,6 +450,39 @@ async function jsonApi(body){
   return r.json();
 }
 
+// ---- 轻量 Markdown 渲染（段落/加粗/行内码/列表；先转义再替换，防 XSS）----
+function mdText(s){
+  if(!s) return '';
+  // 1) HTML 转义（必须先转，防止原文注入标签）
+  const h = String(s).replace(/[&<>"']/g,
+    c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  // 2) 行内：`code`（先转占位，避免被后续规则破坏）
+  const codes=[];
+  const a = h.replace(/`([^`\\n]+)`/g, (m,c)=>{ codes.push(c); return '\\u0000'+(codes.length-1)+'\\u0000'; });
+  // 3) 行内：**加粗**
+  const b = a.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
+  // 4) 段落：把连续行 && 分段成块（块间空行分隔）
+  const lines = b.split('\\n');
+  const blocks = [];
+  let cur = [];
+  lines.forEach(l=>{
+    const trimmed = l.trim();
+    if(!trimmed){ if(cur.length) blocks.push(cur), cur=[]; return; }
+    cur.push(trimmed);
+  });
+  if(cur.length) blocks.push(cur);
+  const out = blocks.map(lines2=>{
+    // 全块都是列表行才整块渲染列表，否则按普通段落（引导句 + 列表会被拆成两段）
+    const allList = lines2.every(l=>/^[-*]\\s+/.test(l));
+    if(allList){
+      return '<ul>'+lines2.map(l=>'<li>'+l.replace(/^[-*]\\s+/,'')+'</li>').join('')+'</ul>';
+    }
+    return '<p>'+lines2.map(l=>l.replace(/^[-*]\\s+/,'')).join('<br>')+'</p>';
+  }).join('');
+  // 6) 还原行内码占位
+  return out.replace(/\\u0000(\\d+)\\u0000/g,(m,i)=>'<code>'+codes[+i]+'</code>');
+}
+
 // ---- SSE 流式请求（打字机）；解析失败/环境不支持 → 抛错由调用方降级 JSON ----
 function renderRefs(candidates){
   if(!candidates || !candidates.length) return;
@@ -472,7 +511,7 @@ async function streamAsk(body, pending){
     if(!r.ok) throw new Error('请求失败：HTTP '+r.status);
     if(!r.body) throw new Error('环境不支持流式（无 body）');
     const reader=r.body.getReader(), decoder=new TextDecoder();
-    let buf='';
+    let buf='', acc='';   // acc：流式累计的 Markdown 原文（每次 delta 全量重渲染）
     while(true){
       const {done, value}=await reader.read();
       if(done) break;
@@ -493,9 +532,10 @@ async function streamAsk(body, pending){
           renderRefs(obj.candidates||[]);
           if(obj.not_found) pending.textContent=obj.not_found;
         }else if(ev==='delta'){
-          // 首帧先清掉「思考中…」占位，再逐块追加，保证正文从第一个字开始
-          if(pending.textContent===THINKING) pending.textContent='';
-          pending.textContent+=(obj.text||'');
+          acc += (obj.text||'');
+          // 首帧清掉「思考中…」占位；之后每帧对累计全文做段落渲染（打字机）
+          pending.textContent = (pending.textContent===THINKING) ? '' : pending.textContent;
+          pending.innerHTML = mdText(acc) || pending.textContent;
           msgs.scrollTop=msgs.scrollHeight;
         }
         // done 帧无需处理（正文已逐段累积）
@@ -520,7 +560,7 @@ async function ask(body, pending){
     }
   }
   const d=await jsonApi(body);
-  pending.textContent=d.answer||'（无回答）';
+  pending.innerHTML = mdText(d.answer) || '（无回答）';
   if(d.index_stale){ staleEl.style.display='block'; staleEl.textContent='⚠️ '+d.index_stale; }
   renderRefs(d.candidates);
 }

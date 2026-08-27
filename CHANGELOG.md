@@ -12,6 +12,13 @@
   → `done`（全文）；不带该头保持原 JSON 响应，老客户端零影响。
   网页问答 `/webui/chat` 已接入打字机效果 + 「停止」按钮（`AbortController` 中断），
   无 `ReadableStream` 时自动降级回普通 JSON。
+
+### 修复
+- **流式回答段落排版与占位前缀**：`/webui/chat` 新增轻量 Markdown 渲染（段落/加粗/
+  列表/行内码），流式打字机逐帧对累计全文重渲染，非流式 JSON 路径共用同一渲染器，
+  两端观感一致；收到首个增量前先清空「思考中…」占位，避免占位符拼入正文头部。
+- **回答生成格式引导**：`assistant.py` 的 `PROMPT_TMPL` 增加「多自然段组织、
+  段间空行分隔、并列要点用短列表」约束，使流式与非流式输出都倾向结构化分段。
 - 仓库门面化（公众号引流铺垫）：README 顶部横幅 `assets/banner.png`、30 秒快速体验区与终端演示图
   `assets/demo-term.png`、社交预览图 `assets/social-preview.png`、底部「作者与公众号」区（二维码占位）。
 - 新增 `CONTRIBUTING.md`（贡献流程：开发环境/测试/提交规范/PR）与 `SECURITY.md`（漏洞报告与密钥-EV规范）。

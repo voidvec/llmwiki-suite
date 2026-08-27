@@ -616,7 +616,25 @@ class TestSseStream:
         js = wb._CHAT_WEBUI_HTML
         # 占位常量定义存在
         assert "THINKING" in js
-        # delta 帧处理：先清占位（textContent=THINKING 判定）再追加
+        # delta 帧处理：先清占位（textContent=THINKING 判定）再渲染
         assert "pending.textContent===THINKING" in js
-        assert "pending.textContent=''" in js
-        assert "pending.textContent+=(obj.text||'')" in js
+        assert "pending.textContent = " in js  # 清占位（三目：THINKING→''）
+        assert "pending.innerHTML = mdText(acc)" in js
+
+    def test_webui_has_markdown_paragraph_renderer(self, monkeypatch, tmp_path):
+        """前端新增：mdText 轻量 Markdown 渲染（段落/加粗/列表/行内码），
+        流式打字机与非流式 JSON 共用，保证段落排版一致。"""
+        wb = self._bridge(monkeypatch, tmp_path)
+        js = wb._CHAT_WEBUI_HTML
+        assert "function mdText(s)" in js
+        # 段落：按行切块渲染 <p>（JS 源码里是 HTML 串 '<p>'+…）
+        assert "'<p>'" in js
+        # 列表：全列表行块 → <ul>
+        assert "allList" in js and "'<ul>'" in js
+        # 加粗 → <strong>、行内码 → <code>
+        assert "'<strong>$1</strong>'" in js
+        assert "<code>" in js
+        # delta 打字机期间用 mdText 渲染（段落即时成形）
+        assert "pending.innerHTML = mdText(acc)" in js
+        # 非流式 JSON 路径也用同一渲染器
+        assert "pending.innerHTML = mdText(d.answer)" in js

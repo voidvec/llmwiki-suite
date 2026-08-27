@@ -1,0 +1,42 @@
+name: 📄 文档改进 / 使用咨询
+description: 文档缺失、误导、过期，或不知道怎么用它实现某个场景
+title: "[docs] "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先花 30 秒搜一下既有 [Issues](https://github.com/voidvec/llmwiki-suite/issues) 和
+        [Discussions](https://github.com/voidvec/llmwiki-suite/discussions)，避免重复。
+        最欢迎的贡献：顺手开一个 PR 把文档改对（见 `CONTRIBUTING.md`）。
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - 文档错误 / 过期（命令行为、示例、README）
+        - 文档缺失（某个场景完全没覆盖）
+        - 使用咨询（不知道怎么做某事）
+        - 想加一个使用案例到 README / 教程
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: 详情
+      description: 上下文、你查了哪篇文档、期望的结果。如涉及命令，贴出真实输出
+      placeholder: |
+        场景：…
+        我看了：docs/…
+        期望：…
+        实际：…
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: self
+    attributes:
+      label: 自查
+      options:
+        - label: 已确认最新版行为（`llmwiki --help` / PyPI 版本）
+        - label: 未包含任何密钥 / token

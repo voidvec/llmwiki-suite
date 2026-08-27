@@ -29,7 +29,7 @@
 - `kb-index.json` 等产物不进版本库（脚手架已配 `.gitignore`）。
 - 正在写入的 Markdown 由 `llmwiki ingest` 处理——改动前建议在分支 / 版本控制下操作，
   因为它可能批量改写 frontmatter 与 wikilink（第一次跑可先 `--dry-run` 或备份）。
-- 把服务暴露公网前，先读 `docs/llmwiki-tutorial-02-channel.md` 的部署建议。
+- 把服务暴露公网前，先读 `docs/tutorials/llmwiki-tutorial-02-channel.md` 的部署建议。
 
 ## 受支持版本
 

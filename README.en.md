@@ -132,7 +132,7 @@ The toolkit only calls OpenAI-compatible `/chat/completions` — it ignores vend
 
 > Any OpenAI `/chat/completions`-compatible service works (DeepSeek / Qwen / Kimi /
 > local Ollama / vLLM, etc.). Full setup, session persistence and troubleshooting:
-> see `docs/llmwiki-tutorial-02-channel.md`.
+> see `docs/tutorials/llmwiki-tutorial-02-channel.md`.
 
 ## Configuration & secrets
 
@@ -148,9 +148,9 @@ All docs live in `docs/`, organized entry → advanced → reference:
 | Doc | What it covers |
 |-----|----------------|
 | `docs/getting-started.md` | **Entry**: onboard an existing notes library in 10 minutes |
-| `docs/llmwiki-tutorial-01-system.md` | Full architecture guide: layout, Ingest / Query / Lint, automation |
-| `docs/llmwiki-tutorial-02-channel.md` | Channels: WeChat / WeCom bridge, serve deployment |
-| `docs/llmwiki-tutorial-03-quality-tuning.md` | Retrieval tuning: eval sets, diagnosis, parameter tuning |
+| `docs/tutorials/llmwiki-tutorial-01-system.md` | Full architecture guide: layout, Ingest / Query / Lint, automation |
+| `docs/tutorials/llmwiki-tutorial-02-channel.md` | Channels: WeChat / WeCom bridge, serve deployment |
+| `docs/tutorials/llmwiki-tutorial-03-quality-tuning.md` | Retrieval tuning: eval sets, diagnosis, parameter tuning |
 | `docs/llmwiki-eval.md` | **Command reference**: eval CLI options, eval-set schema, report fields, metrics |
 | `docs/llmwiki-evolution-roadmap.md` | **Roadmap**: from passive Q&A to a self-evolving knowledge base (L0→L3) |
 | `docs/llmwiki-architecture.md` | System architecture: layered design, channel abstraction |

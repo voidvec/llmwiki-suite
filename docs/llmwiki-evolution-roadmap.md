@@ -80,7 +80,7 @@ version: "1.0"
 {
   "queries": [
     {"query": "如何配置 lint 自动化", "asked_at": "2026-08-20T10:12",
-     "top_hit": "docs/llmwiki-tutorial-01-system.md", "rank": 1,
+     "top_hit": "docs/tutorials/llmwiki-tutorial-01-system.md", "rank": 1,
      "answered_ok": true}
   ],
   "gaps": [

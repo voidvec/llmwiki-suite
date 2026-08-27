@@ -265,28 +265,47 @@ class TestHeadingExistsAnchorFallback:
         assert not heading_exists("notes/doc.md", "安装", idx)
 
 
-# ---- eval：内置评测集回退 + 索引缺失指引 ----
+# ---- eval：无评估集行为 + 索引缺失指引 + --demo / --seed ----
 
-class TestEvalBuiltinFallback:
-    def test_missing_index_gives_guidance_exitcode1(self, tmp_path, capsys):
-        """索引缺失时返回 1 并提示先 `llmwiki index`，不裸抛 FileNotFoundError。"""
+class TestEvalNoQueries:
+    def test_missing_index_gives_guidance_exitcode3(self, tmp_path, capsys):
+        """索引缺失时返回 3 并提示先 `llmwiki index`，不裸抛 FileNotFoundError。"""
         from llmwiki.config import load_config
         from llmwiki.eval_recall import run_eval_cmd
         p = _make_kb(tmp_path)  # 只有 README，无 kb-index.json
         cfg = load_config(p)
         rc = run_eval_cmd(cfg, queries_path=str(p / "eval_queries.json"))
         err = capsys.readouterr().err
-        assert rc == 1
+        assert rc == 3
         assert "llmwiki index" in err
 
-    def test_builtin_queries_fallback_marks_meta(self, tmp_path, monkeypatch,
-                                                 capsys):
-        """>=0.1.3：库根无 eval_queries.json 时回退内置集，meta 记录 queries_is_builtin。"""
+    def test_no_queries_exit2(self, tmp_path, capsys):
+        """>=0.1.4：库根无 eval_queries.json → 不评估（杜绝回退内置假分数），退出码 2。"""
+        import json
+        from llmwiki.config import load_config
+        from llmwiki.eval_recall import run_eval_cmd
+        p = _make_kb(tmp_path)
+        (p / "kb-index.json").write_text(json.dumps({"documents": []}),
+                                         encoding="utf-8")
+        cfg = load_config(p)
+        with capsys.disabled():
+            pass
+        rc = run_eval_cmd(cfg, queries_path=str(p / "eval_queries.json"),
+                          out_dir=str(tmp_path / "out"))
+        err = capsys.readouterr().err
+        assert rc == 2
+        assert "未找到评估集" in err
+        assert "eval --seed" in err
+        assert not list((tmp_path / "out").glob("recall-eval-*.json")), \
+            "无评估集时不应产出报告（不能留下假分数）"
+
+    def test_demo_mode_runs_explicitly(self, tmp_path, monkeypatch, capsys):
+        """--demo：显式要求用内置评测集，能正常产出且 meta 标记 queries_is_builtin。"""
         import json
         from llmwiki.config import load_config
         import llmwiki.eval_recall as er
         p = _make_kb(tmp_path)
-        (p / "kb-index.json").write_text("{}", encoding="utf-8")  # 仅让索引存在检查通过
+        (p / "kb-index.json").write_text("{}", encoding="utf-8")
         cfg = load_config(p)
 
         class _FakeFreshness:
@@ -298,16 +317,75 @@ class TestEvalBuiltinFallback:
         class _FakeRetriever:
             freshness = _FakeFreshness()
             def recall(self, *a, **k):
-                return []   # 不对真实召回敏感，本测试只验证回退标记
+                return []   # 不对真实召回敏感，本测试只验证 demo 标记/路径
 
         monkeypatch.setattr(er, "KbRetriever", lambda *a, **k: _FakeRetriever())
-        out_dir = tmp_path / "out"
-        rc = er.run_eval_cmd(cfg, queries_path=str(p / "eval_queries.json"),
-                             out_dir=str(out_dir))
+        out_dir = tmp_path / "out-demo"
+        rc = er.run_eval_cmd(cfg, queries_path=str(p / "missing.json"),
+                             out_dir=str(out_dir), demo=True)
         err = capsys.readouterr().err
         assert rc == 0
-        assert "内置" in err  # 打印了回退警告
+        assert "内置示例评测集" in err  # demo 模式提示
         snaps = list(out_dir.glob("recall-eval-*.json"))
-        assert snaps, "未生成 JSON 快照"
+        assert snaps, "demo 模式应产出报告"
         meta = json.loads(snaps[0].read_text(encoding="utf-8"))["meta"]
         assert meta["queries_is_builtin"] is True
+        assert meta["queries_source"] == "demo-builtin"
+
+    def test_seed_generates_and_runs(self, tmp_path, monkeypatch, capsys):
+        """--seed：从索引采样写 eval_queries.json 并立即评估。"""
+        import json
+        from llmwiki.config import load_config
+        import llmwiki.eval_recall as er
+        p = _make_kb(tmp_path)
+        # 造一份含 3 个普通文档 + 1 个 generated-index 的假索引
+        (p / "kb-index.json").write_text(json.dumps({
+            "documents": [
+                {"path": "notes/aaa.md", "title": "AAA 主题",
+                 "kind": "doc"},
+                {"path": "notes/bbb.md", "title": "BBB 主题",
+                 "kind": "doc"},
+                {"path": "templates/tpl.md", "title": "模板",
+                 "kind": "doc"},     # 应被过滤（templates/ 排除）
+                {"path": "category-index.md", "title": "导航索引",
+                 "kind": "generated-index"},  # 应被过滤
+            ],
+        }), encoding="utf-8")
+        cfg = load_config(p)
+
+        class _FakeFreshness:
+            stale = unknown = False
+            changed = added = deleted = []
+            def summary(self):
+                return "fresh"
+
+        class _FakeRetriever:
+            freshness = _FakeFreshness()
+            def recall(self, *a, **k):
+                return []
+
+        monkeypatch.setattr(er, "KbRetriever", lambda *a, **k: _FakeRetriever())
+        qp = p / "eval_queries.json"
+        rc = er.run_eval_cmd(cfg, queries_path=str(qp), seed=True,
+                             out_dir=str(tmp_path / "out"))
+        capsys.readouterr()  # 丢弃标注输出
+        assert rc == 0
+        assert qp.is_file(), "--seed 应写出 eval_queries.json"
+        seeded = json.loads(qp.read_text(encoding="utf-8"))
+        paths = {q["expected"][0] for q in seeded["queries"]}
+        assert "notes/aaa.md" in paths
+        assert "notes/bbb.md" in paths
+        # 过滤断言：templates 与 generated-index 都不进 seed
+        assert "templates/tpl.md" not in paths
+        assert "category-index.md" not in paths
+
+    def test_seed_requires_index(self, tmp_path, capsys):
+        """--seed 但无索引 → 退出码 3 并提示先 llmwiki index。"""
+        from llmwiki.config import load_config
+        from llmwiki.eval_recall import run_eval_cmd
+        p = _make_kb(tmp_path)  # 无 kb-index.json
+        cfg = load_config(p)
+        rc = run_eval_cmd(cfg, seed=True, out_dir=str(tmp_path / "out"))
+        err = capsys.readouterr().err
+        assert rc == 3
+        assert "llmwiki index" in err

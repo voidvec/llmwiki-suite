@@ -288,33 +288,95 @@ def render_chart_svg(meta: dict, summary: dict, results: list[dict],
     return "\n".join(out)
 
 
+def _seed_queries_from_index(index: dict, limit: int = 20) -> dict:
+    """从索引自动采样生成首版评估集（--seed）。
+
+    规则：期望路径一律取索引内**真实存在**的文档（避免指向不存在/被排除的文件）；
+    过滤条件：
+      - kind != 'generated-index'（category-index 等派生产物会随 rebuild 漂移，
+        且对「内容召回」无区分度——不期望其被 top-K 命中）
+      - path 不以 templates/ 开头（默认排除，不进索引，expected 永不命中）
+      - 有真实 title（无标题的文档 query 无意义）
+    每条 query = 文档标题改写为提问式，expected = [该文档真实 path]。
+    """
+    dts = index.get("documents", [])
+    pick = []
+    for d in dts:
+        p = d.get("path", "")
+        if d.get("kind") == "generated-index":
+            continue
+        if p.startswith("templates/"):
+            continue
+        title = d.get("title") or d.get("basename") or ""
+        if not title:
+            continue
+        pick.append((title, p))
+    if not pick:
+        return {"schema_version": "1.0", "queries": []}
+    n = min(limit, len(pick))
+    # 均匀抽样，保证覆盖面
+    step = max(1, len(pick) // n)
+    sampled = pick[::step][:n]
+    queries = [
+        {"query": "%s 是什么" % t, "expected": [p],
+         "note": "auto-seed：由标题自动生成"}
+        for t, p in sampled
+    ]
+    return {"schema_version": "1.0", "top_k": 4, "queries": queries}
+
+
 def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
                  out_dir=None, tag=None, retriever_desc=None, prod_top_k=4,
-                 chart=False):
+                 chart=False, demo=False, seed=False, seed_limit=20):
     repo = str(cfg.repo)
     default_qp = os.path.join(repo, "eval_queries.json")
     queries_path = queries_path or default_qp
     used_builtin = False
-    if not os.path.isfile(queries_path):
+    if demo:
+        # --demo：显式演示模式。内置集仅供套件自测/演示，与我们库无关
         used_builtin = True
         queries_path = _BUILTIN_QUERIES
-        print("[eval] ⚠ 未找到 %s，回退使用套件内置示例评测集。" % default_qp,
+        print("[eval] --demo 模式：使用套件内置示例评测集（expected 指向套件 "
+              "testkb/demo 库，与你的知识库无关，分数不具参考意义）",
               file=sys.stderr)
-        print("[eval]   内置集 expected 指向套件 demo/notes 库，与你的知识库无关，"
-              "分数不具参考意义！", file=sys.stderr)
-        print("[eval]   请放置 <库根>/eval_queries.json（见 docs/llmwiki-eval.md），"
-              "或用 --queries 指定评测集。", file=sys.stderr)
+    elif seed:
+        if not os.path.isfile(cfg.index_path):
+            print(f"[eval] --seed 需要索引（未找到 {cfg.index_path}），"
+                  "请先运行 `llmwiki index`", file=sys.stderr)
+            return 3
+        with open(cfg.index_path, "r", encoding="utf-8") as f:
+            idx = json.load(f)
+        queries = _seed_queries_from_index(idx, seed_limit)
+        queries_path = default_qp
+        with open(default_qp, "w", encoding="utf-8") as f:
+            json.dump(queries, f, ensure_ascii=False, indent=2)
+        print(f"[eval] --seed：已从索引采样 {len(queries['queries'])} 条并写入 "
+              f"{default_qp}，下面用其评估（首版分数较低属正常）", file=sys.stderr)
+    elif not os.path.isfile(queries_path):
+        # 无评估集：先判断更根本的前置（索引不存在则先引导建索引，
+        # 否则引导生成评估集）。绝不回退内置 demo 集（不提供假分数）。
+        if not os.path.isfile(cfg.index_path):
+            print(f"[eval] 找不到索引 {cfg.index_path}：请先运行 `llmwiki index` "
+                  "后再做评估", file=sys.stderr)
+            return 3
+        print(f"[eval] 未找到评估集 {default_qp}：跳过评估（不提供假分数）",
+              file=sys.stderr)
+        print("[eval]   生成首版评估集：`llmwiki eval --seed`（从索引采样）", file=sys.stderr)
+        print("[eval]   或放置评估集文件：<库根>/eval_queries.json（见 docs/llmwiki-eval.md），"
+              "或用 `--queries` 指定。", file=sys.stderr)
+        return 2
+
     tag = tag or f"baseline-{date.today().isoformat()}"
     retriever_desc = retriever_desc or "llmwiki.recall.KbRetriever (BM25 + body_text + wikilink graph)"
 
     queries = load_queries(queries_path)
     top_k = top_k or int(queries.get("top_k", 4))
-    # 索引缺失时给出可操作指引，而不是抛裸 FileNotFoundError
+    # 索引缺失时给出可操作指引，而不是抛裸 FileNotFoundError（退出码 3=无法评估）
     if not os.path.isfile(cfg.index_path):
         print(f"[eval] 找不到索引 {cfg.index_path}", file=sys.stderr)
         print("[eval]   请先在库根运行 `llmwiki index` 生成 kb-index.json 后再做评估。",
               file=sys.stderr)
-        return 1
+        return 3
     retriever = KbRetriever(cfg.index_path, exclude_dirs=cfg.exclude_dirs,
                             alias_groups=cfg.alias_groups,
                             min_score_per_term=cfg.min_score_per_term,
@@ -346,7 +408,11 @@ def run_eval_cmd(cfg, queries_path=None, top_k=None, min_score=0.15,
         "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "index_path": os.path.relpath(cfg.index_path, repo),
         "queries_path": queries_path,
-        "queries_is_builtin": used_builtin,
+        "queries_source": ("demo-builtin" if demo else
+                           "seed" if seed else
+                           "explicit" if queries_path != default_qp else
+                           "repo"),
+        "queries_is_builtin": used_builtin,   # 兼容旧 meta 字段
         "top_k": top_k,
         "min_score": min_score,
         "min_score_per_term": cfg.min_score_per_term,
@@ -399,7 +465,14 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="llmwiki eval", description="召回质量评估")
     ap.add_argument("--repo", default=None, help="知识库根目录（默认: 当前目录解析）")
     ap.add_argument("--queries", default=None,
-                    help="评估集路径（默认: <repo>/eval_queries.json，回退包内置示例集）")
+                    help="评估集路径（默认: <repo>/eval_queries.json）")
+    ap.add_argument("--demo", action="store_true",
+                    help="显式演示模式：使用套件内置示例评测集（expected 指向套件 "
+                         "testkb/demo 库，分数与你的库无关，仅套件自测/演示用）")
+    ap.add_argument("--seed", action="store_true",
+                    help="从索引采样自动生成首版评估集 eval_queries.json 后立即评估")
+    ap.add_argument("--seed-limit", type=int, default=20,
+                    help="--seed 采样上限（默认 20 条）")
     ap.add_argument("--top-k", type=int, default=None)
     ap.add_argument("--min-score", type=float, default=0.15)
     ap.add_argument("--min-score-per-term", type=float, default=None,
@@ -419,7 +492,8 @@ def main(argv=None):
     run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
                  min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
                  retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k,
-                 chart=args.chart)
+                 chart=args.chart, demo=args.demo, seed=args.seed,
+                 seed_limit=args.seed_limit)
     return 0
 
 

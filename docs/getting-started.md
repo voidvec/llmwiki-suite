@@ -131,6 +131,7 @@ llmwiki ingest        # 先 dry-run 预览，再 --apply 真正写入
 llmwiki index         # 建 kb-index.json
 llmwiki query "随便问"   # 检索/问答
 llmwiki lint          # 健康巡检
+llmwiki eval --seed   # 首版召回评估：从索引采样生成 eval_queries.json 并跑分（无评估集时 eval 会退码提示 --seed）
 llmwiki serve         # 要跑 HTTP 服务时（已装 [serve] 则直接可用）
 ```
 

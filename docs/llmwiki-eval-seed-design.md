@@ -1,6 +1,6 @@
 ---
 title: "设计：eval_queries.json 的生成时点与无评估集行为"
-description: "针对『新用户没有 eval_queries.json 时 llmwiki eval 的行为』与『eval_queries.json 应该在哪个阶段被生成/更新』的设计决策文档：现状问题、三阶段生成策略、四场景矩阵、推荐方案与实施清单。"
+description: "针对『新用户没有 eval_queries.json 时 llmwiki eval 的行为』与『eval_queries.json 应该在哪个阶段被生成/更新』的设计决策文档：现状问题、三阶段生成策略、四场景矩阵、已拍板的实施结果。"
 categories: ['知识库规范', '软件架构']
 tags:
   - llmwiki
@@ -12,7 +12,7 @@ difficulty: "advanced"
 estimated_time: "15分钟"
 created: "2026-08-27"
 updated: "2026-08-27"
-version: "1.0"
+version: "2.0"
 ---
 
 # eval_queries.json 的生成时点与无评估集时的召回成功率设计
@@ -25,13 +25,14 @@ version: "1.0"
 
 ## 1. 现状与问题
 
-### 1.1 当前行为（0.1.3 实测）
+### 1.1 当前行为（0.1.4 已修复）
 
 | 场景 | 行为 | 结果 |
 |---|---|---|
 | 有 `<repo>/eval_queries.json` | 用它评估 | 正确 |
-| 无评估集 + 有索引 | **回退到包内置 `data/eval_queries.json`**（8 条 demo 集，expected 指向套件 testkb 的笔记） | **假 100%（8/8）**：库内容与 demo 集无关但因恰好存在同名文件而全命中 |
-| 无评估集 + 无索引 | 先回退内置集，再拦「索引缺失」退出 | 提示但 exit 0 |
+| 无评估集 + 有索引 | **退出码 2**：「未提供假分数」+ 引导 `--seed` / 放置文件 | ✅ 显式未评估 |
+| 无评估集 + 无索引 | **退出码 3**：先引导建索引 | ✅ 显式指引 |
+| `--demo` 显式调用 | 用内置 demo 集跑（expected 指向套件 testkb/demo 库） | 明确标注「与你的库无关」 |
 
 实测输出（testkb 无 eval_queries.json）：
 
@@ -67,8 +68,8 @@ version: "1.0"
 
 | 阶段 | 触发时点 | 产物 | 完整性 | 自动化程度 |
 |------|----------|------|--------|------------|
-| **T0 骨架** | `llmwiki init` | `eval_queries.json`（种子模板，指向 `templates/` 或 `README.md` 等稳定文件） | 空壳可运行（2~3 条） | 全自动 |
-| **T1 首版** | 首次 `llmwiki index` 后 | 基于真实索引自动采样：从文档标题/分类中生成 10~20 query，expected 用**索引内真实 path** | 可跑、真实命中率低（反映初始质量） | 半自动（可加开关） |
+| **T0 骨架** | ~~`llmwiki init`~~（**已否决**：templates/ 默认排除、README 非保证，种子必然指向永不进索引的文件） | — | 空壳可运行 | 已移除 |
+| **T1 首版** | `llmwiki eval --seed`（需先 index） | 基于真实索引自动采样：从文档标题生成，expected 用**索引内真实 path**（过滤 templates/ 与 generated-index） | 可跑、真实（反映首版检索质量） | 全自动 |
 | **T2 维护** | `ingest` 后 / 手动 | 人工补充领域 query + `_resolve_expected_paths` 自动修复过期路径 | 完整、有代表性 | 手动 + 自动修复 |
 
 ---
@@ -86,15 +87,20 @@ version: "1.0"
   → stderr 不再输出误导性的「回退内置集 100%」
 ```
 
-### 4.2 新增子命令 / 选项（选择一种接口）
+### 4.2 已拍板接口
 
-| 接口 | 行为 |
-|------|------|
-| **A. `llmwiki eval --seed`** | 用当前索引自动生成 `eval_queries.json`（摘要→query 模板 → 期望 = 该 doc path），再立即跑一次评估 |
-| **B. `llmwiki init --with-eval`** | init 时生成种子评估集（指向 templates/README），首次 eval 就有「最小可跑」 |
-| **C. `eval` 检测到无评估集时自动提示** 用法 | 不改默认行为，只把提示从 stderr 提到 stdout 首行 + 退出码 2 |
+> 2026-08-27 拍板：**取消任何自动回退内置集**；内置 demo 集改为**显式 `--demo`**；
+> 首版评估集由 `--seed` 一键生成。`init` 不再生成 T0 种子（模板默认排除、README 不保证
+> 存在，会指向永不进索引的文件——避免造出另一种假象）。
 
-> 我们倾向 **先做 B（init 生成） + 快速做 C（把警告提升到 stdout + 退出码 2）**，`--seed` 作为后续增强。
+| 接口 | 行为 | 状态 |
+|------|------|------|
+| **`llmwiki eval --demo`** | 显式用套件内置示例评测集跑分（expected 指向套件 testkb/demo 库，分数与用户库无关） | ✅ 已实施 |
+| **`llmwiki eval --seed`** | 从索引采样生成 `eval_queries.json`（标题→query，expected=真实路径，过滤 templates/ 与 generated-index），再立即评估 | ✅ 已实施 |
+| **`llmwiki eval --seed-limit N`** | 采样上限（默认 20） | ✅ 已实施 |
+| **无评估集 → exit 2** | 不评估、不提供假分数、stdout 引导 `--seed` | ✅ 已实施 |
+| **索引缺失 → exit 3** | 比评估集更前置：「先建索引」优先于「生成评估集」 | ✅ 已实施 |
+| `llmwiki init` 生成 T0 种子 | ❌ **否决**——templates/ 默认排除、README 不保证存在，expected 会指向永不进索引的文件，又是一种假象 | 已从清单移除 |
 
 ### 4.3 退出码语义（与 `check_recall_baseline` 对齐）
 
@@ -117,13 +123,15 @@ version: "1.0"
 
 ---
 
-## 6. 推荐实施清单（供拍板）
+## 6. 实施结果（2026-08-27 拍板后落地）
 
-1. **T0 种子**：`llmwiki init` 时同步生成 `eval_queries.json`（3 条，expected 指向 `templates/meeting-notes.md`、`templates/book-notes.md`、`README.md`——这些是 init 必产的真实文件，避免「expected 指向不存在的文档」）；
-2. **行为收紧**：`llmwiki eval` 找不到评估集 → **不评估**，stdout 打「[eval] 未在 <repo> 找到 eval_queries.json；已跳过。运行 llmwiki init（生成种子）或放置后重试」→ **退出码 2**；
-3. **`--seed` 增强（可选，二期）**：`llmwiki eval --seed` 从索引采样标题生成首版评估集（18~30 条），一条命令完成「建集 + 跑分」；
-4. **保留内置集**：内置 `data/eval_queries.json` 仅作为**该套件自己的冒烟测试**（跑 `llmwiki eval --queries <内置集>` 才能看到 demo 分），不再自动回退；
-5. **文档**：在 `getting-started.md` 第 2 步告知「index 后可用 `eval --seed` 生成首版评估集」；在 `llmwiki-eval.md` 写明退出码 2 语义。
+1. **行为收紧**：`llmwiki eval` 找不到评估集 → **不评估**，stdout 打「未在 <repo> 找到 eval_queries.json；已跳过」→ **退出码 2**；绝不回退内置 demo 集；
+2. **`--demo`**：内置 `data/eval_queries.json` 仅作套件自测/演示（`llmwiki eval --demo`），不再自动回退；
+3. **`--seed`（T1）**：`llmwiki eval --seed` 从索引采样标题生成首版评估集（默认 ≤20 条，过滤 `templates/` 与 `generated-index`），一条命令完成「建集 + 跑分」；
+4. **索引缺失 → 退出码 3**：优先于评估集检查，给「先建索引」的明确指引；
+5. **T0 init 种子已否决**：取消 init 生成种子（templates/ 默认排除、README 不保证存在，若种子指向它们会造成新的假 100%），统一走 `--seed`；
+6. **meta 扩展**：快照 `meta.queries_source` 区分 `demo-builtin / seed / explicit / repo`；
+7. **文档**：`llmwiki-eval.md` 增补 §7 退出码与 `--demo/--seed` 用法；`getting-started.md` 第 2 步告知「index 后可用 eval --seed 生成首版评估集」；本设计文档记录拍板。
 
 > **给新用户的一句话引导**：
 > ```

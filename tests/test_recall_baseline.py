@@ -55,7 +55,7 @@ def eval_result(tmp_path_factory):
     out_dir = tmp_path_factory.mktemp("eval_out")
     subprocess.run(
         [sys.executable, str(REPO_ROOT / "scripts" / "check_recall_baseline.py"),
-         "--repo", str(kb), "--out-dir", str(out_dir)],
+         "--repo", str(kb), "--out-dir", str(out_dir), "--demo"],
         check=True, env=env, capture_output=True, text=True)
     json_path = out_dir / "recall-eval-baseline-check.json"
     assert json_path.is_file(), f"未产生 {json_path}"

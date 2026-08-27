@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", default=None,
                     help="知识库根目录（默认解析当前目录；套件默认 testkb）")
     ap.add_argument("--queries", default=None, help="eval_queries.json 路径（默认用 repo 内置）")
+    ap.add_argument("--demo", action="store_true",
+                    help="对套件 testkb/fixtures 用内置评测集做基线（等价 llmwiki eval --demo）")
     ap.add_argument("--recall", type=float, default=0.95,
                     help="contextual_recall 阈值（默认 0.95）")
     ap.add_argument("--mrr", type=float, default=0.90, help="MRR 阈值（默认 0.90）")
@@ -96,7 +98,8 @@ def main(argv: list[str] | None = None) -> int:
             import tempfile
             out_dir = tempfile.mkdtemp(prefix="recall-baseline-")
         run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
-                     min_score=args.min_score, out_dir=out_dir, tag=tag or "baseline-check")
+                     min_score=args.min_score, out_dir=out_dir, tag=tag or "baseline-check",
+                     demo=args.demo)
         json_path = os.path.join(out_dir, f"recall-eval-{tag or 'baseline-check'}.json")
 
     with open(json_path, "r", encoding="utf-8") as f:

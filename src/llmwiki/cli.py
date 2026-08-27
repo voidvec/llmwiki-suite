@@ -284,7 +284,8 @@ def cmd_eval(args) -> int:
     return run_eval_cmd(cfg, queries_path=args.queries, top_k=args.top_k,
                         min_score=args.min_score, out_dir=args.out_dir, tag=args.tag,
                         retriever_desc=args.retriever_desc, prod_top_k=args.prod_top_k,
-                        chart=args.chart)
+                        chart=args.chart, demo=args.demo, seed=args.seed,
+                        seed_limit=args.seed_limit)
 
 
 def cmd_serve(args) -> int:
@@ -376,7 +377,15 @@ def build_parser() -> argparse.ArgumentParser:
     # eval
     sp = sub.add_parser("eval", help="评估召回质量（recall@k / MRR）")
     _add_repo_arg(sp)
-    sp.add_argument("--queries", default=None)
+    sp.add_argument("--queries", default=None,
+                    help="评估集路径（默认: <repo>/eval_queries.json）")
+    sp.add_argument("--demo", action="store_true",
+                    help="显式演示模式：使用套件内置示例评测集（expected 指向套件 "
+                         "testkb/demo 库，分数与你的库无关，仅套件自测/演示用）")
+    sp.add_argument("--seed", action="store_true",
+                    help="从索引采样自动生成首版评估集 eval_queries.json 后立即评估")
+    sp.add_argument("--seed-limit", type=int, default=20,
+                    help="--seed 采样上限（默认 20 条）")
     sp.add_argument("--top-k", type=int, default=None)
     sp.add_argument("--min-score", type=float, default=0.15)
     sp.add_argument("--out-dir", default=None)

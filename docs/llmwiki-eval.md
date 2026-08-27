@@ -12,7 +12,7 @@ tags:
 difficulty: "intermediate"
 estimated_time: "10分钟"
 created: "2026-08-25"
-updated: "2026-08-25"
+updated: "2026-08-27"
 version: "1.0"
 ---
 
@@ -30,7 +30,8 @@ version: "1.0"
 Markdown 报告 + JSON 快照。它是「调参前先留基线、调完后对比」的数字工具。
 
 ```
-llmwiki eval [--repo <kb>] [--queries <file.json>] [--top-k N]
+llmwiki eval [--repo <kb>] [--queries <file.json>] [--demo] [--seed [--seed-limit N]]
+             [--top-k N]
              [--min-score F] [--min-score-per-term F] [--prod-top-k N]
              [--out-dir <dir>] [--tag <label>]
 ```
@@ -42,7 +43,10 @@ llmwiki eval [--repo <kb>] [--queries <file.json>] [--top-k N]
 | 选项 | 默认 | 作用 |
 |------|------|------|
 | `--repo <path>` | 当前目录（解析链） | 知识库根目录 |
-| `--queries <file.json>` | `<repo>/eval_queries.json`，缺失时回退**包内置示例集** | 评估集路径 |
+| `--queries <file.json>` | `<repo>/eval_queries.json`（**缺失则不评估**，见 §7） | 评估集路径 |
+| `--demo` | 关 | 显式演示模式：用**套件内置示例评测集**（expected 指向套件 testkb/demo 库，分数与你的库无关，仅供套件自测/演示） |
+| `--seed` | 关 | 从索引采样自动生成首版 `eval_queries.json` 后立即评估 |
+| `--seed-limit N` | **20** | `--seed` 采样上限 |
 | `--top-k N` | 评估集 `top_k` 字段；再缺省 **4** | 召回截断 K（与生产 `build_context(max_chapters=4)` 同 K） |
 | `--min-score F` | **0.15** | 绝对分数门槛（BM25 量纲），过滤无关键候选 |
 | `--min-score-per-term F` | 套件/`llmwiki.toml` 配置值 | 每词阈值（查询长度感知），`0` 关闭 |
@@ -126,8 +130,15 @@ llmwiki eval [--repo <kb>] [--queries <file.json>] [--top-k N]
 ## 5. 常见用法
 
 ```bash
-# 跑内置评估集（默认）
+# 评估你的知识库（需先在库根放置 eval_queries.json）
 llmwiki eval
+
+# 首版评估集：从索引自动采样生成（新库无需手写）
+llmwiki eval --seed            # 采样最多 20 条，写入 eval_queries.json 后立即评估
+llmwiki eval --seed-limit 40   # 调整采样上限
+
+# 套件演示/自测（内置示例集，分数与你的库无关）
+llmwiki eval --demo
 
 # 自定义评估集 + 关于 K
 llmwiki eval --queries my-eval.json --top-k 4
@@ -149,17 +160,35 @@ print('after :', a['summary']['contextual_recall'], a['summary']['mrr'])
 
 # 基线回归（不经 pytest，供 CI / pre-commit）：低于阈值退出码非 0
 python scripts/check_recall_baseline.py --repo <kb> --build --recall 0.95 --mrr 0.9
+
+# 对套件自带库做基线断言（内部演示集）
+python scripts/check_recall_baseline.py --demo --repo testkb
 ```
 
 ---
 
-## 6. 与其它命令的关系
+## 7. 退出码语义（供 CI / pre-commit 判断）
+
+| 退出码 | 含义 | 典型场景 |
+|--------|------|----------|
+| **0** | 评估完成且达标 | 有评估集、索引正常、指标达基线 |
+| **1** | 评估完成但未达标 | 有评估集但 recall/MRR 低于阈值（回归） |
+| **2** | 无评估集，**未评估**（不提供假分数） | 库根无 `eval_queries.json`、未用 `--queries`/`--demo`/`--seed` |
+| **3** | 无法评估（索引缺失） | 无 `kb-index.json`（先跑 `llmwiki index`） |
+
+> 设计原则：**「无法评估」绝不伪装成「评估了且满分」**。历史上 0.1.3 会在无评估集时
+> 回退套件内置示例集并打出「100%」——那是与你的库无关的幻读分数；
+> 0.1.4 起改为显式退出码 2 + 引导（`--seed` / 放置文件），内置示例集仅经 `--demo` 显式调用。
+
+---
+
+## 8. 与其它命令的关系
 
 | 命令 | 关系 |
 |------|------|
-| `llmwiki index` | **前置**。评估基于索引；改文档后必须重建再评估（索引不自动刷新） |
+| `llmwiki index` | **前置**。评估基于索引；改文档后必须重建再评估（索引不自动刷新）；缺失时 eval 退出码 3 |
 | `llmwiki lint` | 互补。lint 查结构（断链/词表/命名），eval 查检索质量 |
-| `scripts/check_recall_baseline.py` | eval 的**断言化入口**（退出码 0/1/2），供 CI 与 pre-commit 集成 |
+| `scripts/check_recall_baseline.py` | eval 的**断言化入口**（退出码 0/1/2/3），供 CI 与 pre-commit 集成 |
 
 ---
 

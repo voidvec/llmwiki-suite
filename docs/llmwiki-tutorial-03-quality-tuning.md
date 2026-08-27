@@ -52,9 +52,23 @@ version: "2.0"
 
 ## 3. 建立评估基准（先别急着调）
 
-### 3.1 内置评估集 + 自定义评估集
+### 3.1 首版评估集：--seed 一键生成 + 自定义评估集
 
-套件自带一份**通用评估集**（`llmwiki eval` 直接可跑），覆盖会议纪要 / BM25 调优 / 部署 / 导航等通用主题，期望路径均为相对路径——任何库都能直接产出有意义的 baseline。
+**新库建议先用 `--seed` 从索引自动生成首版评估集**（无需手写）：
+
+```bash
+llmwiki eval --seed          # 从索引采样 ≤20 条，写入 eval_queries.json 后立即评估
+llmwiki eval --seed-limit 30 # 调整采样上限
+```
+
+> `--seed` 生成的 query 是「文档标题 → 提问式」（如「BM25 调优记录 是什么」），
+> expected 直接指向索引内真实路径（自动排除 `templates/` 与 `category-index.md` 等
+> 派生产物）——所以第一版分数「偏低」是正常的，它反映的是**首版检索的真实起点**。
+> 之后按下面要点逐步补充/替换成真实失败 query。
+
+套件内置示例评测集（`llmwiki eval --demo`）仅面向**套件自测/演示**：expected 指向
+套件 testkb/demo 库，与你的知识库无关，分数不具参考意义——**不会**在缺评估集时
+自动回退（那是 0.1.3 的假 100% 缺陷，0.1.4 起改为退出码 2 + 引导）。
 
 如果你想针对自己的库定制，新建一个 JSON 评估集（schema 如下）：
 
@@ -82,11 +96,14 @@ version: "2.0"
 ### 3.2 跑评估
 
 ```bash
-# 用内置评估集（默认）
+# 评估你的知识库（需先放置或 --seed 生成 eval_queries.json）
 llmwiki eval
 
 # 用自定义评估集
 llmwiki eval --queries path/to/my-eval.json
+
+# 套件自测/演示（内置示例集，与你的库无关）
+llmwiki eval --demo
 
 # 打标签存快照（调参对比用）
 llmwiki eval --tag baseline-2026-08-24

@@ -30,7 +30,8 @@ jobs:
             --repo tests/fixtures/kb \
             --build \
             --out-dir "$RUNNER_TEMP/recall-eval" \
-            --tag ci-baseline
+            --tag ci-baseline \
+            --demo
       - name: 构建校验
         run: |
           pip install build twine

@@ -9,6 +9,7 @@
 > Turn a pile of Markdown notes into a personal knowledge base that **grows and answers questions**.
 
 [![PyPI version](https://img.shields.io/pypi/v/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
+[![Python](https://img.shields.io/pypi/pyversions/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml)
 [![Release](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/voidvec/llmwiki-suite)](LICENSE)

@@ -29,6 +29,37 @@
 - extras 更名：`[wechat]` → `[serve]`（该依赖组实际驱动所有通道的 `llmwiki serve`，不再单指微信）；`[wechat]` 保留为兼容别名。
 - 版本 0.1.1 → 0.1.2（发布新 extras 元数据）。
 
+## [0.1.4] - 2026-08-27
+
+### 新增
+- `llmwiki eval --seed [--seed-limit N]`：从索引文档标题**采样生成首版 `eval_queries.json`**
+  （自动过滤 `templates/`、`category-index.md` 等派生产物，保证 expected 指向真实进索引的文档），
+  写盘后立即用本集评估——新用户一条命令拿到**针对自己库**的首版评估集：
+  `llmwiki init && llmwiki ingest && llmwiki index && llmwiki eval --seed`。
+- `llmwiki eval --demo`：显式演示模式——内置示例评测集仅供套件**自测/演示**使用
+  （`scripts/check_recall_baseline.py --demo`），stderr 明确标注「expected 指向套件 demo 库，
+  与你的知识库无关，分数不具参考意义」。
+- 报告 `meta.queries_source` 字段：区分 `repo` / `explicit` / `seed` / `demo-builtin`
+  （取代原 `queries_is_builtin` 布尔）。
+
+### 变更
+- **取消内置集自动回退**（不提供假成功结果）：`llmwiki eval` 无 `eval_queries.json` 时不再
+  自动改用包内置示例集（0.1.3 会跑出「假 100%」），改为**退出码 2** + 引导
+  `--seed` 或放置评估集文件。
+- 退出码语义收紧：**2** = 无评估集（可恢复缺失），**3** = 索引缺失，且索引缺失判断
+  **优先于**评估集判断（先 `llmwiki index` 再评估）。
+- `scripts/check_recall_baseline.py` 同步 `--demo` 透传（套件自身基线回归改为显式用内置集）。
+- 设计取舍：**否决 init 生成 T0 种子**（`templates/` 默认排除、README 非保证存在，
+  种子必指向永不进索引的文件），统一定为 `--seed` 一条命令闭环。
+- 文档同步：`llmwiki-eval.md`（选项/退出码）、`llmwiki-tutorial-03`（§3.1/3.2）、
+  `getting-started.md`（0→1 流程补 `eval --seed`）、设计文档改版 2.0 记录拍板结果。
+- 版本 0.1.3 → 0.1.4（行为收紧 + 新功能）。
+
+### 测试
+- 套件测试 40 passed：新增无评估集→2、`--demo` 标记、`--seed` 采样过滤、`--seed` 无索引→3。
+- 真实 CLI 五场景验证：无集+有索引→exit 2、`--seed`→写盘并评估、`--demo`→显式内置集、
+  `--seed` 无索引→exit 3、无集无索引→exit 3。
+
 ## [0.1.3] - 2026-08-26
 
 ### 新增

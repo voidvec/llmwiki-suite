@@ -25,10 +25,6 @@
 
 ## 快速体验（30 秒）
 
-<p align="center">
-  <img src="assets/demo-term.png" alt="llmwiki 五步接入演示" width="100%"/>
-</p>
-
 ```bash
 # 一条命令装好全部能力（核心 + 服务/通道运行时）
 pip install "llmwiki-suite[serve]"

@@ -87,6 +87,40 @@ def img_draw(img):
     return ImageDraw.Draw(img)
 
 
+def is_cjk(ch):
+    o = ord(ch)
+    return (0x4E00 <= o <= 0x9FFF or 0x3400 <= o <= 0x4DBF or
+            0x3000 <= o <= 0x303F or 0xFF00 <= o <= 0xFFEF or
+            o in (0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2026,
+                  0x2192, 0x2713, 0x00B7, 0x2022, 0x25CF))
+
+
+def split_segments(text):
+    """Split text into runs of same kind (CJK vs latin/code)."""
+    if not text:
+        return []
+    runs, cur, cur_kind = [], text[0], is_cjk(text[0])
+    for ch in text[1:]:
+        k = is_cjk(ch)
+        if k == cur_kind:
+            cur += ch
+        else:
+            runs.append((cur_kind, cur))
+            cur, cur_kind = ch, k
+    runs.append((cur_kind, cur))
+    return runs
+
+
+def draw_mixed(d, xy, text, font_code, font_cjk, fill):
+    """Render a line mixing code (Consolas) and CJK (YaHei) glyphs."""
+    x, y = xy
+    for kind, seg in split_segments(text):
+        fnt = font_cjk if kind else font_code
+        d.text((x, y), seg, font=fnt, fill=fill)
+        x += fnt.getlength(seg)
+    return x
+
+
 def make_banner(W=1280, H=628):
     img = Image.new("RGB", (W, H), CG["bg"])
     grid(img, 64)
@@ -110,7 +144,8 @@ def make_banner(W=1280, H=628):
     term_frame(img, tx, ty, tw, th, "llmwiki 5-step quickstart")
     d = ImageDraw.Draw(img)
     y = ty + 72
-    cf = F(CONSOLAS, 17)
+    code_f = F(CONSOLAS, 17)
+    cjk_f = F(YAHEI, 17)
     lines = [
         ("$ llmwiki init", CG["violet"], 0),
         ("  ✓ 生成 llmwiki.toml 脚手架", CG["muted"], 0),
@@ -126,7 +161,7 @@ def make_banner(W=1280, H=628):
             d.rounded_rectangle([tx + 10, y - 4, tx + tw - 10, y + 26], radius=6,
                                 fill=CG["panel2"])
             y += 6
-        d.text((tx + 22, y), text, font=cf, fill=col)
+        draw_mixed(d, (tx + 22, y), text, code_f, cjk_f, col)
         y += 36
     dots(img_draw(img), tx + 22, ty + th - 24, tx + tw - 22, 4, CG["teal"])
     img.save(os.path.join(ASSETS, "banner.png"), optimize=True)
@@ -159,7 +194,7 @@ def make_og(W=1600, H=630):
                             fill=CG["panel"], outline=CG["line"], width=1)
         d.rounded_rectangle([W - 540, yy + 18, W - 540 + 44, yy + 62], radius=8, fill=col)
         d.text((W - 472, yy + 16), name, font=F(YAHEI_BOLD, 26), fill=col)
-        d.text((W - 472, yy + 52), desc, font=F(CONSOLAS, 16), fill=CG["muted"])
+        draw_mixed(d, (W - 472, yy + 52), desc, F(CONSOLAS, 16), F(YAHEI, 16), CG["muted"])
         yy += 104
     img.save(os.path.join(ASSETS, "social-preview.png"), optimize=True)
 
@@ -169,13 +204,14 @@ def make_term_demo(W=1360, H=800):
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([28, 28, W - 28, H - 28], radius=20, fill=(22, 25, 36),
                         outline=CG["line"], width=2)
-    d.text((70, 54), "demo — llmwiki 五步接入已有笔记库", font=F(CONSOLAS, 17), fill=CG["muted"])
+    draw_mixed(d, (70, 54), "demo — llmwiki 五步接入已有笔记库",
+               F(CONSOLAS, 17), F(YAHEI, 17), CG["muted"])
     d.line([28, 92, W - 28, 92], fill=CG["line"], width=1)
 
     x0, y = 64, 150
     step_y = 54
-    cf = F(CONSOLAS, 21)
-    of = F(CONSOLAS, 20)
+    code_f = F(CONSOLAS, 21)
+    cjk_f = F(YAHEI, 21)
     lines = [
         ("$ llmwiki init", CG["violet"], True),
         ("✓ 生成 llmwiki.toml + .gitignore / pre-commit / CI 脚手架", CG["muted"], False),
@@ -190,11 +226,7 @@ def make_term_demo(W=1360, H=800):
     ]
     d = ImageDraw.Draw(img)
     for text, col, cmd in lines:
-        if cmd:
-            d.text((x0, y), text, font=F(CONSOLAS, 21), fill=col)
-        else:
-            fnt = F(CONSOLAS, 20)
-            d.text((x0, y), text, font=fnt, fill=col)
+        draw_mixed(d, (x0, y), text, code_f, cjk_f, col)
         y += step_y
     img.save(os.path.join(ASSETS, "demo-term.png"), optimize=True)
 
@@ -204,6 +236,3 @@ if __name__ == "__main__":
     make_og()
     make_term_demo()
     print("OK ->", ASSETS)
-
-def img_draw(img):
-    return ImageDraw.Draw(img)

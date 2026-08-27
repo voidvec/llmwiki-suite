@@ -389,3 +389,37 @@ class TestEvalNoQueries:
         err = capsys.readouterr().err
         assert rc == 3
         assert "llmwiki index" in err
+
+
+# ---- _git_mv：目标已存在不覆盖、返回诊断（防静默失败回归） ---------------
+
+class TestGitMv:
+    def test_dest_exists_returns_not_ok(self, tmp_path):
+        """目标文件已存在 → 返回 (False, 含「目标已存在」诊断)，且不覆盖原文件。"""
+        import subprocess
+        from llmwiki.ingest import _git_mv
+        repo = tmp_path / "kb"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        (repo / "07_config：xxx.md").write_text("a", encoding="utf-8")
+        (repo / "07-config-xxx.md").write_text("b", encoding="utf-8")  # 既定目标已存在
+        ok, reason = _git_mv(str(repo), "07_config：xxx.md", "07-config-xxx.md")
+        assert ok is False
+        assert "目标已存在" in reason
+        # 不应覆盖目标内容
+        assert (repo / "07-config-xxx.md").read_text(encoding="utf-8") == "b"
+        # 源文件仍在（未被删除）
+        assert (repo / "07_config：xxx.md").exists()
+
+    def test_dst_missing_renames(self, tmp_path):
+        """目标不存在 → fallback os.rename 成功，返回 True。"""
+        import subprocess
+        from llmwiki.ingest import _git_mv
+        repo = tmp_path / "kb"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        (repo / "a_config.md").write_text("x", encoding="utf-8")
+        ok, reason = _git_mv(str(repo), "a_config.md", "a-config.md")
+        assert ok is True, reason
+        assert (repo / "a-config.md").exists()
+        assert not (repo / "a_config.md").exists()

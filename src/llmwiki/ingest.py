@@ -250,19 +250,32 @@ def suggest_dir(category, index):
 
 
 def _git_mv(repo, src, dst):
-    """优先 git mv（保留历史）；对 untracked 新文件 git mv 会失败，fallback os.rename。"""
+    """优先 git mv（保留历史）；对 untracked 新文件 git mv 会失败，fallback os.rename。
+
+    返回 (ok: bool, reason: str)。ok=False 说明重命名未执行，reason 给出诊断。
+    目标已存在是唯一不视为异常的失败——它通常意味着库里已有规范化同义文件
+    （如 `07_config：xxx.md` 与 `07-config-xxx.md` 并存），此时**不覆盖**目标，
+    打印 warning 提醒排查重复，而非静默吞掉（此前版本静默失败导致 ingest
+    反复报告同一批 rename，用户误以为没修好）。
+    """
     import subprocess
+    src_full = os.path.join(repo, src)
+    dst_full = os.path.join(repo, dst)
     try:
         os.makedirs(os.path.join(repo, os.path.dirname(dst) or "."), exist_ok=True)
         r = subprocess.run(["git", "-C", repo, "mv", src, dst],
                            capture_output=True, check=False)
-        if r.returncode != 0:
-            src_full = os.path.join(repo, src)
-            dst_full = os.path.join(repo, dst)
-            if os.path.isfile(src_full) and not os.path.exists(dst_full):
-                os.rename(src_full, dst_full)
-    except Exception:
-        pass
+        if r.returncode == 0:
+            return True, ""
+        # git mv 失败：看目标是否已存在
+        if os.path.exists(dst_full):
+            return False, "目标已存在，未重命名（%s → %s）；请先清理重复文件" % (src, dst)
+        if os.path.isfile(src_full):
+            os.rename(src_full, dst_full)
+            return True, ""
+        return False, "源文件已不存在：%s" % src
+    except Exception as e:
+        return False, "git mv 异常：%s" % e
 
 
 def run_ingest(cfg: Config, apply=False, move=False, report=None, use_llm=True):
@@ -384,7 +397,9 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None, use_llm=True):
         if rename_action:
             dst = rename_action["detail"].split(" -> ")[1]
             if os.path.isfile(os.path.join(repo, rel)):
-                _git_mv(repo, rel, dst)
+                ok, reason = _git_mv(repo, rel, dst)
+                if not ok and reason:
+                    print("    [warn] %s（%s）" % (rel, reason))
         # suggest-move 默认不执行；--move 时谨慎处理
         if move:
             mv = next((a for a in p["actions"] if a["type"] == "suggest-move"), None)
@@ -393,8 +408,11 @@ def run_ingest(cfg: Config, apply=False, move=False, report=None, use_llm=True):
                 if os.path.isdir(os.path.join(repo, dst_dir)):
                     dst = dst_dir + "/" + os.path.basename(rel)
                     if not os.path.exists(os.path.join(repo, dst)):
-                        _git_mv(repo, rel, dst)
-                        print("    [move] %s -> %s（请跑 lint 校验引用）" % (rel, dst))
+                        ok, reason = _git_mv(repo, rel, dst)
+                        if not ok and reason:
+                            print("    [warn] %s（%s）" % (rel, reason))
+                        else:
+                            print("    [move] %s -> %s（请跑 lint 校验引用）" % (rel, dst))
     # 重建索引（Ingest 最后一环，包内直调）
     print("[ingest] 重建索引...")
     from .gen_index import gen_index

@@ -27,7 +27,7 @@ import re
 # frontmatter 块：必须含开头的 --- 与闭合的 ---（行级编辑铁律：绝不删除 ---）。
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?", re.S)
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
-CODE_FENCE_RE = re.compile(r"```.*?```", re.S)
+CODE_FENCE_RE = re.compile(r"`{3,}.*?`{3,}", re.S)
 INLINE_CODE_RE = re.compile(r"`[^`]*`")
 
 # 链接提取（在剥掉代码块/内联代码之后进行，否则 C++ `[[T]]`、bash `[[ =~ ]]` 误报）。
@@ -150,6 +150,8 @@ _DECOR_RE = re.compile(
     "\U00002300-\U000023FF"   # 杂项技术符号（⏰⏱⏳…）
     "\U0001F1E6-\U0001F1FF"   # 区域指示符
     "\uFE0F\u200D\u200B"      # 变体选择/零宽连接
+    "\u2B50\u2B1C\u2B1B\u2B24"  # ⭐ ⬜ ⬛ ⬤ CIRCLED 装饰（标题前缀）
+    "\u2605"                   # ★ 实心黑星
     "]"
 )
 

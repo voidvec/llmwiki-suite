@@ -202,6 +202,27 @@ class TestAnchorSlug:
         from llmwiki.kb_core import anchor_slug
         assert anchor_slug("3.1 🧠 C/C++ 扩展配置") == "cc-扩展配置"
 
+    def test_star_decor_stripped(self):
+        """⭐(U+2B50) 属装饰前缀，应被剥离（真实库 claude-mcp 目录链接场景）。"""
+        from llmwiki.kb_core import anchor_slug
+        assert anchor_slug("## 2. ⭐ 必装 MCP 服务器") == "必装-mcp-服务器"
+
+    def test_four_backtick_fence_does_not_swallow_headings(self):
+        """4 反引号闭合的围栏（```text 内容 ````）不应吞掉其后的标题。
+
+        真实库案例：claude-cli 集成指南用 ```` 闭合 ```text，旧正则 ```.*?``` 按 3
+        个反引号配对导致多吞一整个代码块、丢失 6 个章节标题。"""
+        from llmwiki.kb_core import extract_headings
+        bt = "`"  # backtick
+        md = (
+            "# 标题一\n\n"
+            f"{bt*3}text\n目录结构\n{bt*4}\n\n"      # 4 反引号闭合
+            f"## 启动服务\n\n{bt*3}code\n{bt*3}\n"
+        )
+        heads = [h.strip() for h in extract_headings(md)]
+        assert "启动服务" in heads
+        assert len(heads) == 2
+
 
 # ---- heading_exists：gh_slug 严格 + anchor_slug 宽松双段比对 ----
 

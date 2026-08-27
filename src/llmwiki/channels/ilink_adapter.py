@@ -226,6 +226,7 @@ class IlinkAdapter(ChannelAdapter):
                             self.baseurl_override = baseurl
                             self.base_url = baseurl
                         self.login_time = time.time()
+                        self.connected = True  # 扫码激活成功立即标记为已连接
                     self._save_session()
                     LOG.info("iLink 激活成功")
                     return True, "activated"

@@ -454,9 +454,9 @@ async function load(){
   let html='';
   // 入口卡片
   html+='<div class="card"><h3>入口</h3>'+
-    '<div class="row"><span class="k">网页问答</span><span class="v"><a href="/webui/chat" class="btn">打开问答</a></span></div>'+
+    '<div class="row"><span class="k">网页问答</span><span class="v"><a href="/webui/chat" target="_blank" class="btn">打开问答</a></span></div>'+
     (d.index && !d.index.error
-      ? '<div class="row"><span class="k">iLink 绑定</span><span class="v"><a class="btn ghost" href="/ilink/webui">扫码绑定</a></span></div>':'')+
+      ? '<div class="row"><span class="k">iLink 绑定</span><span class="v"><a class="btn ghost" href="/ilink/webui" target="_blank">扫码绑定</a></span></div>':'')+
     '</div>';
   // 索引卡片
   if(d.index && !d.index.error){
@@ -487,11 +487,11 @@ async function load(){
     '<div class="row"><span class="k">/chat</span><span class="v"><code>POST</code> JSON</span></div>'+
     '<div class="row"><span class="k">/recall</span><span class="v"><code>POST</code> JSON</span></div>'+
     '<div class="row"><span class="k">/healthz</span><span class="v"><code>GET</code></span></div>'+
-    '<div class="row"><span class="k">文档</span><span class="v"><a class="ghost" href="/docs">/docs</a></span></div>'+
+    '<div class="row"><span class="k">文档</span><span class="v"><a class="ghost" href="/docs" target="_blank">/docs</a></span></div>'+
     '</div>';
   g.innerHTML=html;
 }
-fetch();
+load();
 </script>
 </body>
 </html>"""

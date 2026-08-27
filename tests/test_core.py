@@ -423,3 +423,33 @@ class TestGitMv:
         assert ok is True, reason
         assert (repo / "a-config.md").exists()
         assert not (repo / "a_config.md").exists()
+
+
+class TestIlinkActivate:
+    """iLink 激活：扫码 confirmed 后必须立即可见（connected=True），
+    WebUI 轮询 /ilink/status 才能从「等待扫码」跳转到「已激活」。"""
+
+    def test_confirmed_sets_connected(self):
+        from unittest import mock
+        from llmwiki.channels.ilink_adapter import IlinkAdapter
+        a = IlinkAdapter(assistant=None)
+        a.connected = False
+        with mock.patch.object(a, "check_qrcode_status",
+                               return_value=(True, "tok123", "https://x.cn")), \
+             mock.patch.object(a, "_save_session"):
+            ok, detail = a.activate(qrcode="abc", timeout=5, interval=0)
+        assert ok is True
+        assert detail == "activated"
+        assert a.connected is True   # 根因修复点
+        assert a.bot_token == "tok123"
+
+    def test_not_confirmed_keeps_disconnected(self):
+        from unittest import mock
+        from llmwiki.channels.ilink_adapter import IlinkAdapter
+        a = IlinkAdapter(assistant=None)
+        a.connected = False
+        with mock.patch.object(a, "check_qrcode_status", return_value=(False, "", "")), \
+             mock.patch("time.sleep"):
+            ok, detail = a.activate(qrcode="abc", timeout=0, interval=0)
+        assert ok is False
+        assert a.connected is False

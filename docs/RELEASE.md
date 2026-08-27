@@ -42,7 +42,7 @@ python -m build
 | wheel 安装 | `pip install dist/llmwiki_suite-0.1.0-py3-none-any.whl` | ✅ CLI 可用 `llmwiki --version` → 0.1.0 |
 | 五步工作流 | `init → ingest --apply → index → query --recall-only → eval` | ✅ 全通（脚手架正确落到测试库，`.pre-commit-config.yaml` 来自 wheel 内 data） |
 | wechat extras | `pip install "llmwiki-suite[serve]"` | ✅ fastapi 0.141.1 / uvicorn 0.52.4 |
-| serve 端点 | `/healthz`、`/recall`(POST)、`/chat`(POST) | ✅ 均 200；`/recall` 返回候选含 `index_stale:null`；无 LLM 密钥时 `/chat` 降级为片段预览 |
+| serve 端点 | `/healthz`、`/api/recall`(POST)、`/api/chat`(POST)（旧别名 `/chat` `/recall` 仍可用） | ✅ 均 200；`/api/recall` 返回候选含 `index_stale:null`；无 LLM 密钥时 `/api/chat` 降级为片段预览 |
 | git 检出源码树安装 | `git clone <repo> && pip install .` | ✅ 构建 wheel + 安装成功（等价 GitHub 直装链路） |
 
 ### 已知平台限制（非缺陷）

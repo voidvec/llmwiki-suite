@@ -10,16 +10,18 @@ wechat_bridge.py -- LlmWiki 微信问答桥接（FastAPI 服务 + 通道编排�
 
 本文件只做「装配 + 生命周期 + 对外 HTTP 端点」，不含任何业务/加解密细节：
 
-  POST /chat          召回 + LLM 生成（受 BRIDGE_TOKEN 保护）
-  POST /recall        仅召回候选（受 BRIDGE_TOKEN 保护）
-  GET  /healthz       通道与网关状态聚合
+  POST /api/chat      召回 + LLM 生成（受 BRIDGE_TOKEN 保护，正式机器接口）
+  POST /api/recall     仅召回候选（受 BRIDGE_TOKEN 保护，正式机器接口）
+  POST /chat           兼容别名，等价 /api/chat（历史 URL 保持可用）
+  POST /recall         兼容别名，等价 /api/recall
+  GET  /healthz        通道与网关状态聚合
   GET  /ilink/qrcode  拉取 iLink 绑定二维码（图片 base64）
   POST /ilink/activate 拉码并在后台等待扫码激活、保存会话
   GET/POST /wechat/callback  企业微信回调（仅 WeComAdapter 注册）
 
 安全（沿用第二次评审 R3）：
   - 默认绑定 127.0.0.1；/wechat/callback 经内网穿透面向公网；
-  - /chat、/recall 加 BRIDGE_TOKEN 网关令牌保护，避免隧道暴露后被任意查询知识库。
+  - /api/*（及 /chat、/recall 别名）加 BRIDGE_TOKEN 网关令牌保护，避免隧道暴露后被任意查询知识库。
 
 依赖：fastapi + uvicorn（对外服务）——**必须**通过 extra 安装：
       pip install "llmwiki-suite[serve]"
@@ -121,15 +123,13 @@ def _stale_warning():
     return None
 
 
-@app.post("/chat", dependencies=[Depends(require_bridge_token)])
-def chat(req: QueryReq):
+def _chat(req: QueryReq):
     answer, candidates = assistant.answer(req.query, req.top_k, req.categories, req.tags)
     return {"answer": answer, "candidates": candidates,
             "index_stale": _stale_warning()}
 
 
-@app.post("/recall", dependencies=[Depends(require_bridge_token)])
-def recall(req: QueryReq):
+def _recall(req: QueryReq):
     hits = assistant.recall(req.query, req.top_k,
                             categories=req.categories or None, tags=req.tags or None)
     return {
@@ -144,6 +144,28 @@ def recall(req: QueryReq):
         # 覆盖长驻进程启动后文件继续变化的场景）
         "index_stale": _stale_warning(),
     }
+
+
+# 正式机器接口（P2 路由收敛的目标前缀）
+@app.post("/api/chat", dependencies=[Depends(require_bridge_token)])
+def api_chat(req: QueryReq):
+    return _chat(req)
+
+
+@app.post("/api/recall", dependencies=[Depends(require_bridge_token)])
+def api_recall(req: QueryReq):
+    return _recall(req)
+
+
+# 兼容别名（历史 URL 保持可用）
+@app.post("/chat", dependencies=[Depends(require_bridge_token)])
+def chat(req: QueryReq):
+    return _chat(req)
+
+
+@app.post("/recall", dependencies=[Depends(require_bridge_token)])
+def recall(req: QueryReq):
+    return _recall(req)
 
 
 # --------------------------------------------------------------------------
@@ -351,7 +373,7 @@ const esc = s => String(s).replace(/[&<>"']/g,
 function addEl(cls, html){ const d=document.createElement('div'); d.className=cls;
   d.innerHTML=html; msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; return d; }
 async function api(body){
-  const url = '/chat' + (token ? '?token='+encodeURIComponent(token) : '');
+  const url = '/api/chat' + (token ? '?token='+encodeURIComponent(token) : '');
   const r = await fetch(url, {method:'POST',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   if(r.status === 401){
@@ -484,9 +506,10 @@ async function load(){
     : '<span class="badge b-off">未配置</span>')+'</div></div>';
   // API 卡片
   html+='<div class="card"><h3>API</h3>'+
-    '<div class="row"><span class="k">/chat</span><span class="v"><code>POST</code> JSON</span></div>'+
-    '<div class="row"><span class="k">/recall</span><span class="v"><code>POST</code> JSON</span></div>'+
+    '<div class="row"><span class="k">/api/chat</span><span class="v"><code>POST</code> JSON</span></div>'+
+    '<div class="row"><span class="k">/api/recall</span><span class="v"><code>POST</code> JSON</span></div>'+
     '<div class="row"><span class="k">/healthz</span><span class="v"><code>GET</code></span></div>'+
+    '<div class="row"><span class="k">兼容别名</span><span class="v"><code>/chat /recall</code> 仍可用</span></div>'+
     '<div class="row"><span class="k">文档</span><span class="v"><a class="ghost" href="/docs" target="_blank">/docs</a></span></div>'+
     '</div>';
   g.innerHTML=html;

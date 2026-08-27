@@ -87,7 +87,7 @@ pip install "llmwiki-suite[serve]"
 | `LLM_WIKI_API_KEY` | 推荐 | 空 → 降级预览 | OpenAI 兼容端点密钥 |
 | `LLM_WIKI_BASE_URL` | 否 | `https://api.openai.com/v1` | 自建 / 兼容 LLM 网关 |
 | `LLM_WIKI_MODEL` | 否 | `gpt-4o-mini` | 模型名 |
-| `LLM_WIKI_BRIDGE_TOKEN` | 建议 | 空（开发放行） | 保护 `/chat`、`/recall` |
+| `LLM_WIKI_BRIDGE_TOKEN` | 建议 | 空（开发放行） | 保护 `/api/chat`、`/api/recall`（旧别名 `/chat` `/recall` 同样受保护） |
 | `LLM_WIKI_ENABLE_ILINK` | 否 | `1`（启用） | 设 `0` 关闭个人微信通道 |
 | `LLM_WIKI_WECOM_TOKEN` / `LLM_WIKI_WECOM_AES_KEY` | 企业微信需 | 空 → 不启用 | 企业微信回调验签 / 加解密 |
 | `LLM_WIKI_WECOM_CORPID` / `LLM_WIKI_WECOM_SECRET` / `LLM_WIKI_WECOM_AGENTID` | 企业微信需 | 空 | 主动推送用 |
@@ -121,7 +121,7 @@ export LLM_WIKI_BASE_URL="http://127.0.0.1:11434/v1"; export LLM_WIKI_MODEL="qwe
 
 ### 2.2 LLM_WIKI_BRIDGE_TOKEN 是什么、从哪来
 
-它是**你自己定义的一个网关口令**，不是平台提供。作用：保护 `/chat`、`/recall` 两个对外端点——部署用内网穿透暴露公网后，陌生人无法随便查你的知识库；设了之后必须带令牌（`?token=xxx` 或头 `X-Bridge-Token: xxx`）否则 `401`。
+它是**你自己定义的一个网关口令**，不是平台提供。作用：保护 `/api/chat`、`/api/recall` 两个对外端点（历史别名 `/chat`、`/recall` 同样受保护）——部署用内网穿透暴露公网后，陌生人无法随便查你的知识库；设了之后必须带令牌（`?token=xxx` 或头 `X-Bridge-Token: xxx`）否则 `401`。
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(16))"
@@ -136,7 +136,7 @@ python -c "import secrets; print(secrets.token_hex(16))"
 ```bash
 # bash（Linux / macOS / Git Bash）
 export LLM_WIKI_API_KEY="sk-xxxx"     # 不设则答案降级为片段预览
-export LLM_WIKI_BRIDGE_TOKEN="my-secret"  # 建议设置，保护 /chat /recall
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"  # 建议设置，保护 /api/chat /api/recall
 export LLM_WIKI_ENABLE_ILINK="1"          # 个人微信通道（默认即开）
 cd ~/my-notes                    # 库目录（D3 解析锚点）
 llmwiki serve --host 127.0.0.1 --port 8000
@@ -321,7 +321,7 @@ curl -F "url=https://<你的域名>/telegram/callback" \
 | 微信发消息无回复 | ① 查服务日志 `[ilink]`；② 确认 `connected:true`；③ `LLM_WIKI_API_KEY` 缺失会降级但仍有回复 |
 | 答案被截断 1800 字 | iLink 单条限制已截断；更长需分段发送 |
 | 24h 后不再回复 | 会话过期，按 §4.4 重激活 |
-| `/chat` 返回 401 | 设了 `LLM_WIKI_BRIDGE_TOKEN`，请求带 `?token=xxx` 或 `X-Bridge-Token: xxx` |
+| `/api/chat` 或 `/chat` 返回 401 | 设了 `LLM_WIKI_BRIDGE_TOKEN`，请求带 `?token=xxx` 或 `X-Bridge-Token: xxx` |
 | 端口被占 | `llmwiki serve --port 8001` 或释放原端口 |
 | 换非 OpenAI 厂商 | 一并设 `LLM_WIKI_BASE_URL` + `LLM_WIKI_MODEL`；要求兼容 OpenAI `/chat/completions` |
 | 弱图 / 不显示 | 缺 `qrcode` 库降级为链接；`pip install qrcode` 恢复 |
@@ -330,7 +330,7 @@ curl -F "url=https://<你的域名>/telegram/callback" \
 
 ## 8. 安全注意事项
 
-- **默认绑定 `127.0.0.1`**：`/chat`、`/recall` 仅本机；内网穿透暴露务必设 `LLM_WIKI_BRIDGE_TOKEN`。
+- **默认绑定 `127.0.0.1`**：`/api/chat`、`/api/recall` 仅本机；内网穿透暴露务必设 `LLM_WIKI_BRIDGE_TOKEN`。
 - **token 不出本机**：`.ilink_session.json` 已 ignore，勿手动 `git add`。
 - **iLink 走腾讯云**：非 P2P，受平台开放度与 ToS 约束，请合规使用。
 - **凭证全环境变量**，不硬编码（`LLM_WIKI_*` 前缀下：`API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*`）。

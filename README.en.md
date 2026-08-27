@@ -76,7 +76,7 @@ quality evaluation), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
 | `llmwiki lint` | Checks: broken links, vocab violations, naming conventions |
 | `llmwiki categories-sync` | Derive all categories actually used and write back to `llmwiki.toml` (`--apply` to write) |
 | `llmwiki eval` | Run recall@k / MRR against `<repo>/eval_queries.json`; `--seed` samples and writes a first eval set, `--demo` runs the built-in demo set (`--chart` outputs a self-contained SVG) |
-| `llmwiki serve` | Start FastAPI bridge (`/chat` `/recall` `/healthz`, plus `/webui/chat` web Q&A and `/dashboard` workspace) |
+| `llmwiki serve` | Start FastAPI bridge (`/api/chat` `/api/recall` JSON + legacy aliases `/chat` `/recall`, `/healthz`, plus `/webui/chat` web Q&A and `/dashboard` workspace) |
 
 All commands accept `--repo <path>` to target a specific knowledge base (default: current dir).
 

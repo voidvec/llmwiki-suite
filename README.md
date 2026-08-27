@@ -93,7 +93,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
 | `llmwiki categories-sync` | 从索引派生全部实际类别并写回 `llmwiki.toml`（`--apply` 写入） |
 | `llmwiki eval` | 用 `<repo>/eval_queries.json` 跑 recall@k / MRR；无评估集可 `--seed` 采样生成，`--demo` 跑内置示例集（`--chart` 输出自包含 SVG 图） |
-| `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`，及 `/webui/chat` 网页问答、`/dashboard` 工作台） |
+| `llmwiki serve` | 启动 FastAPI 桥接服务（`/api/chat` `/api/recall` JSON 接口 + `/chat` `/recall` 别名、`/healthz`，及 `/webui/chat` 网页问答、`/dashboard` 工作台） |
 
 所有命令支持 `--repo <path>` 显式指定库路径（默认取当前目录）。
 

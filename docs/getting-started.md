@@ -103,7 +103,7 @@ cd ~/mykb
 export LLM_WIKI_API_KEY="sk-xxx"        # 建议；不设则降级预览
 export LLM_WIKI_BASE_URL="https://api.openai.com/v1"   # 可选；默认 OpenAI
 export LLM_WIKI_MODEL="gpt-4o-mini"     # 可选；默认 gpt-4o-mini
-export LLM_WIKI_BRIDGE_TOKEN="my-secret"# 建议：保护 /chat /recall
+export LLM_WIKI_BRIDGE_TOKEN="my-secret"# 建议：保护 /api/chat /api/recall（旧 /chat /recall 别名同样受保护）
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 

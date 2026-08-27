@@ -453,3 +453,30 @@ class TestIlinkActivate:
             ok, detail = a.activate(qrcode="abc", timeout=0, interval=0)
         assert ok is False
         assert a.connected is False
+
+
+class TestApiRoutes:
+    """P2 路由收敛：/api/* 为正式机器接口，旧 /chat /recall 保留为兼容别名。
+    校验路由注册（等价性由同一处理函数保证，见 wechat_bridge._chat/_recall）。"""
+
+    def _bridge(self, monkeypatch, tmp_path):
+        import os
+        monkeypatch.setenv("KB_INDEX", str(tmp_path / "kb-index.json"))
+        from llmwiki.channels import wechat_bridge as wb
+        return wb
+
+    def test_api_and_legacy_routes_registered(self, monkeypatch, tmp_path):
+        wb = self._bridge(monkeypatch, tmp_path)
+        routes = {(getattr(r, "path", None), ",".join(sorted(r.methods or [])))
+                  for r in wb.app.routes}
+        for expect in [("/api/chat", "POST"), ("/api/recall", "POST"),
+                       ("/chat", "POST"), ("/recall", "POST")]:
+            assert expect in routes, f"路由缺失: {expect}"
+        # /api/* 与旧别名共用同一处理函数（结构化等价，非复制代码）
+        assert wb.api_chat.__doc__ is None or "兼容" not in (wb.api_chat.__doc__ or "")
+        assert wb.chat is not wb.api_chat  # 两个端点函数（同一 _chat 后端）
+
+    def test_webui_js_uses_api_prefix(self, monkeypatch, tmp_path):
+        wb = self._bridge(monkeypatch, tmp_path)
+        js = wb._CHAT_WEBUI_HTML
+        assert "'/api/chat'" in js, "网页问答页应调用正式接口 /api/chat"

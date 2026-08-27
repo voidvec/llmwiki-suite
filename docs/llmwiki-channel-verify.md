@@ -54,7 +54,7 @@ llmwiki serve --host 127.0.0.1 --port 8000
 
 ### BRIDGE_TOKEN（本地验证可忽略）
 
-`LLM_WIKI_BRIDGE_TOKEN` 只保护 `/chat`、`/recall` 问答接口；**不涉及飞书 /
+`LLM_WIKI_BRIDGE_TOKEN` 只保护 `/api/chat`、`/api/recall`（及历史别名 `/chat`、`/recall`）问答接口；**不涉及飞书 /
 Telegram 回调**（回调端点不走这个守卫）。本地只验证通道时不用管它；若宿主环境
 残留了该变量（`/healthz` 显示 `bridge_token: true`）并想测问答，才需要在**当前
 命令行**临时清空：
@@ -88,7 +88,20 @@ curl -s http://127.0.0.1:8000/dashboard/status
 - 打开 `http://127.0.0.1:8000/dashboard`：应看到「入口 / 索引 / 通道 / API」四张卡片，
   索引显示文档数 + 新鲜度，通道逐条显示状态，按钮在新标签页打开。
 - 点击「打开问答」→ `/webui/chat`：输入问题 → 返回回答 + 引用卡片；无回答时提示配置 `LLM_WIKI_API_KEY`。
-- 无 `LLM_WIKI_BRIDGE_TOKEN` 时 `/chat` 401，页面应给出提示（不会白屏）。
+- 无 `LLM_WIKI_BRIDGE_TOKEN` 时 `/api/chat` 401，页面应给出提示（不会白屏）。
+
+### 2.3 机器接口（`/api/*` 与旧别名等价）
+
+```bash
+TOKEN="$(echo $LLM_WIKI_BRIDGE_TOKEN)"   # 已配置则带上，未配置直接调
+# 正式接口：POST /api/chat
+curl -s -X POST http://127.0.0.1:8000/api/chat \
+  -H "Content-Type: application/json" -d '{"query":"如何配置 lint"}' | head -c 200
+# 兼容别名：POST /chat 应返回与上面完全一致的响应体
+curl -s -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" -d '{"query":"如何配置 lint"}' | head -c 200
+# 返回值结构：{"answer":..., "candidates":[...], "index_stale":null}
+```
 
 ---
 
@@ -208,6 +221,7 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 
 - [ ] `serve` 启动无异常，`/healthz` 显示 feishu+telegram configured ✅
 - [ ] `/webui/chat`、`/dashboard` 返回 200，`/dashboard/status` 返回索引 + 通道状态
+- [ ] `POST /api/chat` 与旧别名 `POST /chat` 返回一致；设了 `BRIDGE_TOKEN` 时未带 token → 401
 - [ ] 浏览器打开 `/dashboard`：入口 / 索引 / 通道 / API 卡片渲染正常
 - [ ] 飞书 challenge 本地 curl 返回原文
 - [ ] 飞书带签名字段事件 POST 200

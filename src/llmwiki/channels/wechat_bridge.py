@@ -424,6 +424,7 @@ const msgs=document.getElementById('msgs'), input=document.getElementById('input
       stopBtn=document.getElementById('stop');
 let token = localStorage.getItem('llmwiki_token') || '';
 let abort = null;   // P3：当前请求的 AbortController（「停止」按钮）
+const THINKING='思考中…';   // 流式首帧前的占位文本（收到 delta 时先清空再追加）
 const esc = s => String(s).replace(/[&<>"']/g,
   c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function addEl(cls, html){ const d=document.createElement('div'); d.className=cls;
@@ -492,6 +493,8 @@ async function streamAsk(body, pending){
           renderRefs(obj.candidates||[]);
           if(obj.not_found) pending.textContent=obj.not_found;
         }else if(ev==='delta'){
+          // 首帧先清掉「思考中…」占位，再逐块追加，保证正文从第一个字开始
+          if(pending.textContent===THINKING) pending.textContent='';
           pending.textContent+=(obj.text||'');
           msgs.scrollTop=msgs.scrollHeight;
         }
@@ -526,14 +529,14 @@ async function sendMsg(){
   const q=input.value.trim(); if(!q) return;
   addEl('msg user', esc(q)); input.value='';
   send.disabled=true;
-  const pending=addEl('msg bot','思考中…');
+  const pending=addEl('msg bot',THINKING);
   const cats=document.getElementById('cats').value.split(',').map(s=>s.trim()).filter(Boolean);
   const tgs =document.getElementById('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
   const body={query:q, top_k:parseInt(document.getElementById('topk').value,10)||4,
               categories:cats, tags:tgs};
   try{
     await ask(body, pending);
-    if(pending.textContent==='思考中…') pending.textContent='（无回答）';
+    if(pending.textContent===THINKING) pending.textContent='（无回答）';
     pending.className='msg bot';
   }catch(e){
     pending.className='msg bot err'; pending.textContent='请求失败：'+e.message;

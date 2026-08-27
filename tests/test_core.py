@@ -607,3 +607,16 @@ class TestSseStream:
         assert [f["event"] for f in frames] == ["meta", "candidates", "done"]
         cand = frames[1]["data"]
         assert cand["not_found"] == "知识库中未找到相关信息。"
+
+    def test_webui_clears_thinking_placeholder_on_first_delta(
+            self, monkeypatch, tmp_path):
+        """前端修复：收到第一条 delta 前必须先清空「思考中…」占位，
+        否则正文会带占位前缀（用户报告的 bug）。"""
+        wb = self._bridge(monkeypatch, tmp_path)
+        js = wb._CHAT_WEBUI_HTML
+        # 占位常量定义存在
+        assert "THINKING" in js
+        # delta 帧处理：先清占位（textContent=THINKING 判定）再追加
+        assert "pending.textContent===THINKING" in js
+        assert "pending.textContent=''" in js
+        assert "pending.textContent+=(obj.text||'')" in js

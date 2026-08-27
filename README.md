@@ -1,26 +1,54 @@
 # llmwiki-suite
 
+<p align="center">
+  <img src="assets/banner.png" alt="llmwiki-suite — LLM-compiled personal wiki toolkit" width="100%"/>
+</p>
+
 > 🌐 [English](README.en.md) · 中文
+>
+> **把一堆 Markdown 笔记，编译成「会生长、能问答」的个人知识库。**
 
 [![PyPI version](https://img.shields.io/pypi/v/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![Python](https://img.shields.io/pypi/pyversions/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml)
 [![Release](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml)
-
-把一堆 Markdown 笔记编成「会生长、能问答」的个人知识库。
+[![License](https://img.shields.io/github/license/voidvec/llmwiki-suite)](LICENSE)
 
 源自 Karpathy 的 LLM-wiki 思路：不做每次查询临时切片的 RAG，而是用工具链
 **持续编译**笔记——补 frontmatter、建 BM25 + wikilink 图索引、巡检断链，
-最后通过 CLI 或微信通道问答。
+最后通过 CLI 或微信 / 企微 / 飞书 / Telegram 通道问答。
 
-> **包名 vs 命令名**：PyPI 发布名为 **`llmwiki-suite`**（`llmwiki` 这个包名已被其他项目占用），
-> 安装后执行命令仍然是 **`llmwiki`** —— 即「装的是 `llmwiki-suite`，用的是 `llmwiki`」。
+目标是让个人知识库**只进不退**：每一条笔记都被规范化、可检索、可追问，
+而不是躺在文件夹里堆灰。
+
+---
+
+## 快速体验（30 秒）
+
+<p align="center">
+  <img src="assets/demo-term.png" alt="llmwiki 五步接入演示" width="100%"/>
+</p>
+
+```bash
+# 一条命令装好全部能力（核心 + 服务/通道运行时）
+pip install "llmwiki-suite[serve]"
+
+# 五步接入你已有的笔记库
+cd ~/my-notes           # 你的 Markdown 笔记目录
+llmwiki init            # 生成 llmwiki.toml + 脚手架
+llmwiki ingest          # 补 frontmatter + 规范化 wikilink
+llmwiki index           # 建 BM25 + wikilink 图索引
+llmwiki query "..."     # 检索 / 问答 / 输出完整回答
+```
+
+> **包名 vs 命令名**：PyPI 发布名为 **`llmwiki-suite`**（`llmwiki` 包名已被占用），
+> 安装后命令仍是 **`llmwiki`** —— 装 `llmwiki-suite`，用 `llmwiki`。
 
 ## 安装
 
-> 已在 PyPI 发布。**推荐直接装 `serve` 版**（核心 + 跑 `llmwiki serve` 需要的
+> 已在 PyPI 发布。**推荐直接装 `serve` 版**（核心 + 跑 `llmwiki serve` 所需的
 > fastapi/uvicorn，也是所有通道——微信/企微/飞书/Telegram 共用的运行时）；
-> 只看检索/巡检则装核心版即可（零依赖）。
+> 只看检索/巡检则装核心版（零第三方依赖）。
 
 ```bash
 # 推荐：一条命令装好【全部能力】（核心 + 通道时代 fastapi/uvicorn）
@@ -68,7 +96,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后基于召回结果生成完整回答 |
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
 | `llmwiki categories-sync` | 从索引派生全部实际类别并写回 `llmwiki.toml`（`--apply` 写入） |
-| `llmwiki eval` | 用内置评估集跑 recall@k / MRR |
+| `llmwiki eval` | 用内置评估集跑 recall@k / MRR（`--chart` 输出自包含 SVG 图） |
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |
 
 所有命令支持 `--repo <path>` 显式指定库路径（默认取当前目录）。
@@ -91,21 +119,16 @@ llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
 - **个人微信（推荐，免费官方 iLink 通道）**：浏览器打开
-  `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定成功后
-  直接在微信里给 bot 发消息即查即答。
+  `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定后在微信里直接给 bot 发消息即查即答。
 - **企业微信**：配置 `LLM_WIKI_WECOM_*` 环境变量后自动启用回调 / 主动推送通道。
 - **飞书**：配置 `LLM_WIKI_FEISHU_APP_ID` / `LLM_WIKI_FEISHU_APP_SECRET`（可选
-  `LLM_WIKI_FEISHU_VERIFY_TOKEN` 做事件签名校验），在飞书开放平台把事件订阅
-  回调地址设为 `https://<你的域名>/feishu/callback` 即可（challenge 自动应答）。
+  `LLM_WIKI_FEISHU_VERIFY_TOKEN` 签名校验），回调地址设为 `https://<你的域名>/feishu/callback` 即可。
 - **Telegram**：用 @BotFather 建 bot 得 token，配置 `LLM_WIKI_TELEGRAM_BOT_TOKEN`，
-  把 webhook 设到 `https://<你的域名>/telegram/callback`
-  （`setWebhook`；可用 `LLM_WIKI_TELEGRAM_SECRET_TOKEN` 做回调鉴权）。
+  webhook 指向 `https://<你的域名>/telegram/callback`。
+  （webhook 需公网可达地址：可用 frp / ngrok / 腾讯云轻量等反代到 8000。）
 
-> **路由总是注册**：`serve` 启动时四条通道的路由（`/ilink/*`、`/wecom/*`、
-> `/feishu/callback`、`/telegram/callback`）无条件挂载，缺凭据时返回可读的
-> `hint`（不会 404）。可通过 `http://127.0.0.1:8000/healthz` 查看各通道
-> `configured / enabled` 状态。通道回调用不到 `LLM_WIKI_BRIDGE_TOKEN`。
-> Telegram webhook 需要公网可达地址（可用 frp / ngrok / 腾讯云轻量等反代到 8000）。
+> **路由总是注册**：`serve` 启动时四个通道的路由无条件挂载，缺凭据时返回可读的 `hint`
+> （不会 404）。可通过 `http://127.0.0.1:8000/healthz` 查看各通道 `configured / enabled` 状态。
 
 ### 换 LLM 厂商 / 模型（OpenAI 兼容协议即可）
 
@@ -119,16 +142,15 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | Kimi / Moonshot | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
 | 本地 Ollama | `http://127.0.0.1:11434/v1` | `qwen2.5:7b`（API_KEY 随便填） |
 
-> 换厂商只需把上面三个变量一起设；只有 OpenAI 时只用 `LLM_WIKI_API_KEY` 即可。
-> 支持任意 **OpenAI `/chat/completions` 兼容**的第三方服务（DeepSeek / 通义 / Kimi / 本地 Ollama / vLLM 等），
-> 完整对接步骤、会话持久化与排错，详见 [[llmwiki-tutorial-02-channel]]。
+> 任意 OpenAI `/chat/completions` 兼容服务（DeepSeek / 通义 / Kimi / 本地 Ollama / vLLM 等）都行。
+> 完整对接、会话持久化与排错见 [[llmwiki-tutorial-02-channel]]。
 
 ## 配置与密钥
 
 - **库配置**：库根 `llmwiki.toml`（categories 词表、排除目录、模型名等非密钥项）
 - **密钥**：只走环境变量（`LLM_WIKI_API_KEY`、`LLM_WIKI_BRIDGE_TOKEN`（可选）、
-  `LLM_WIKI_WECOM_*`、`LLM_WIKI_ILINK_*`、`LLM_WIKI_FEISHU_*`、
-  `LLM_WIKI_TELEGRAM_*`），本套件不读取任何 `.env` 文件
+  `LLM_WIKI_WECOM_*`、`LLM_WIKI_ILINK_*`、`LLM_WIKI_FEISHU_*`、`LLM_WIKI_TELEGRAM_*`），
+  本套件不读任何 `.env` 文件
 
 ## 文档
 
@@ -143,12 +165,34 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/llmwiki-eval.md` | **命令参考**：eval 全部选项、评估集 schema、报告字段、指标解读 |
 | `docs/llmwiki-evolution-roadmap.md` | **路线图**：从被动问答到知识库自进化（L0→L3） |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
-| `docs/obsidian-guide.md` | 可选：用 Obsidian 作为前端编辑器 |
-| `docs/pypi-release-guide.md` | 维护者：发布到 PyPI 的操作指南（注册/2FA/Token/twine） |
-| `CHANGELOG.md` | 版本变更记录（Keep a Changelog 风格） |
 
 建议顺序：getting-started → tutorial-01 → 02/03（按需）→ architecture。
 
+## 参与贡献
+
+- 想提 bug / 功能？开 [Issue](https://github.com/voidvec/llmwiki-suite/issues/new/choose)
+- 想参与开发？见 [CONTRIBUTING.md](CONTRIBUTING.md)（本地开发环境、测试、提交规范）
+- 安全相关？见 [SECURITY.md](SECURITY.md)（漏洞报告、密钥与 env 规范）
+- 有想法想聊？来 [Discussions](https://github.com/voidvec/llmwiki-suite/discussions)
+- 一键支持：点亮 ⭐ Star，让更多人被搜索到
+
 ## License
 
-MIT
+[MIT](LICENSE)
+
+---
+
+## 作者与公众号
+
+作者：[voidvec](https://github.com/voidvec)
+
+公众号持续输出：
+- LLM / RAG / 知识库的第一手踩坑记录
+- 这套工具链的演进连载（从 L0 被动问答到 L3 自进化）
+- 开源项目从 0 到 1 的全过程复盘
+
+<p align="center">
+  <img src="assets/qrcode-wechat-placeholder.png" alt="公众号二维码（待替换）" width="160"/>
+  <br/>
+  <b>搜索「[公众号名待填]」关注</b>（二维码待替换，可 Q 我）
+</p>

@@ -1,18 +1,23 @@
 # llmwiki-suite
 
+<p align="center">
+  <img src="assets/banner.png" alt="llmwiki-suite — LLM-compiled personal wiki toolkit" width="100%"/>
+</p>
+
 > 🌐 English · [中文](README.md)
+>
+> Turn a pile of Markdown notes into a personal knowledge base that **grows and answers questions**.
 
 [![PyPI version](https://img.shields.io/pypi/v/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![Python](https://img.shields.io/pypi/pyversions/llmwiki-suite.svg)](https://pypi.org/project/llmwiki-suite/)
 [![CI](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/ci.yml)
 [![Release](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml/badge.svg)](https://github.com/voidvec/llmwiki-suite/actions/workflows/release.yml)
-
-Turn a pile of Markdown notes into a personal knowledge base that **grows and answers questions**.
+[![License](https://img.shields.io/github/license/voidvec/llmwiki-suite)](LICENSE)
 
 Inspired by Karpathy's LLM-wiki idea: instead of ad-hoc RAG slicing at query time,
 this toolkit **continuously compiles** your notes — backfills frontmatter, builds a
 BM25 + wikilink-graph index, lints broken links — and then answers via CLI or a
-WeChat channel.
+WeChat / WeCom / Feishu / Telegram channel.
 
 > **Package name vs command name**: on PyPI this is **`llmwiki-suite`** (the bare
 > `llmwiki` name is taken by another project), but the installed command is still
@@ -153,3 +158,19 @@ Suggested order: getting-started → tutorial-01 → 02/03 (as needed) → archi
 ## License
 
 MIT
+
+---
+
+## Author & official account
+
+Author: [voidvec](https://github.com/voidvec)
+
+The author writes (in Chinese) about LLM / RAG / knowledge-base engineering,
+the evolution of this toolkit (from L0 passive Q&A to L3 self-evolution), and
+open-source journeys from 0 to 1.
+
+<p align="center">
+  <img src="assets/qrcode-wechat-placeholder.png" alt="WeChat official account QR (replace me)" width="160"/>
+  <br/>
+  Follow via WeChat: **公众号名待填** (QR placeholder, replace with real one)
+</p>

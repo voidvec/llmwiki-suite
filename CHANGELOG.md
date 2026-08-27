@@ -6,6 +6,11 @@
 ## [Unreleased]
 
 ### 新增
+- 仓库门面化（公众号引流铺垫）：README 顶部横幅 `assets/banner.png`、30 秒快速体验区与终端演示图
+  `assets/demo-term.png`、社交预览图 `assets/social-preview.png`、底部「作者与公众号」区（二维码占位）。
+- 新增 `CONTRIBUTING.md`（贡献流程：开发环境/测试/提交规范/PR）与 `SECURITY.md`（漏洞报告与密钥-EV规范）。
+- 新增 Issue 模板 `docs_usage.yml`（文档改进 / 使用咨询）。
+- 仓库侧已配置 description / topics / Discussions（代用户操作，见 README 社区入口）。
 - 新增 `docs/llmwiki-eval.md`：eval CLI 命令参考（全部选项、评估集 schema、报告字段、指标解读）。
 - 新增英文 README（`README.en.md`）与国际化链接。
 - 新增 GitHub Issue 模板（bug 报告 / 功能请求）。

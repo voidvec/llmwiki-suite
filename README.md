@@ -190,5 +190,5 @@ llmwiki serve --host 127.0.0.1 --port 8000
 <p align="center">
   <img src="assets/qrcode-wechat-placeholder.png" alt="公众号二维码（待替换）" width="160"/>
   <br/>
-  <b>搜索「[公众号名待填]」关注</b>（二维码待替换，可 Q 我）
+  <b>搜索「[王小c]」关注</b>（可 Q 我）
 </p>

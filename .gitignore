@@ -24,3 +24,6 @@ lint-report.json
 # IDE
 .idea/
 .vscode/
+
+# WorkBuddy 本地会话数据
+.workbuddy/

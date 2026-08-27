@@ -96,6 +96,15 @@ llmwiki eval [--repo <kb>] [--queries <file.json>] [--demo] [--seed [--seed-limi
 
 控制台同时打印一条汇总与逐条结果（`+`/`-` 标记命中情况）。
 
+快照 `meta` 关键字段（`--retriever-desc` 可覆盖检索器描述）：
+
+| 字段 | 含义 |
+|------|------|
+| `queries_path` | 本次使用的评估集路径 |
+| **`queries_source`** | 评估集来源：`repo`（库根文件）/ `explicit`（`--queries` 指定）/ `seed`（`--seed` 生成）/ `demo-builtin`（`--demo` 内置示例集） |
+| `top_k` | 本次 K 值 |
+| `retriever` / `retriever_desc` | 检索器标识与描述 |
+
 ---
 
 ## 4. 指标解读
@@ -179,6 +188,26 @@ python scripts/check_recall_baseline.py --demo --repo testkb
 > 设计原则：**「无法评估」绝不伪装成「评估了且满分」**。历史上 0.1.3 会在无评估集时
 > 回退套件内置示例集并打出「100%」——那是与你的库无关的幻读分数；
 > 0.1.4 起改为显式退出码 2 + 引导（`--seed` / 放置文件），内置示例集仅经 `--demo` 显式调用。
+
+---
+
+## 7.1 expected 路径自愈（ingest 改名后不必手改评估集）
+
+`ingest` 的文件名归一（全角 `：` → `-` 等）会改变文档真实路径。若 `eval_queries.json`
+里的 `expected` 还是旧路径，`eval` 精确比对将全部 miss——**不是检索变差，是对答案的卷子没同步**。
+
+从 0.1.4 起 `llmwiki eval` 会拿**索引真实路径**对 `expected` 做归一化重定向（全角标点 → 半角），
+自动匹配到改名后的文档；若发生重定向，stderr 会提示：
+
+```
+⚠ 8 条 expected 路径已按 ingest 归一化重定向（改名导致）
+```
+
+要点：
+
+- **不需要手改评估集**：改名后直接评估，分数不会被陈旧路径拖低；
+- **建集建议**：用 `--seed` 或从 `kb-index.json` 复制真实路径（勿手抄全角标点）；
+- 与 `--seed` 叠加最省心：`--seed` 从索引采样，天然就是新路径，未来改名也有自愈兜底。
 
 ---
 

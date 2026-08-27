@@ -83,7 +83,7 @@ llmwiki index          # 4. 建检索索引
 llmwiki query "..."    # 5. 检索 / 问答
 ```
 
-可选：`llmwiki lint`（巡检断链/词表）、`llmwiki eval`（评估低质量子集并输出诊断）、
+可选：`llmwiki lint`（巡检断链/词表）、`llmwiki eval`（召回质量评估：recall@k / MRR）、
 `llmwiki serve`（启动 HTTP 问答服务，需 `serve` extras）。
 
 ## 命令一览
@@ -96,7 +96,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后基于召回结果生成完整回答 |
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
 | `llmwiki categories-sync` | 从索引派生全部实际类别并写回 `llmwiki.toml`（`--apply` 写入） |
-| `llmwiki eval` | 用内置评估集跑 recall@k / MRR（`--chart` 输出自包含 SVG 图） |
+| `llmwiki eval` | 用 `<repo>/eval_queries.json` 跑 recall@k / MRR；无评估集可 `--seed` 采样生成，`--demo` 跑内置示例集（`--chart` 输出自包含 SVG 图） |
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |
 
 所有命令支持 `--repo <path>` 显式指定库路径（默认取当前目录）。

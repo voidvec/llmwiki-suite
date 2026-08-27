@@ -25,11 +25,12 @@ WeChat / WeCom / Feishu / Telegram channel.
 
 ## Install
 
-> Published on PyPI. **Recommended: install the WeChat channel edition** (one command,
-> core + everything); for retrieval/lint only, the zero-dependency core works.
+> Published on PyPI. **Recommended: install the `serve` edition** (core + the
+> fastapi/uvicorn runtime shared by all channels — WeChat / WeCom / Feishu / Telegram);
+> for retrieval/lint only, the zero-dependency core works.
 
 ```bash
-# Recommended: everything (core + WeChat/WeCom bridge fastapi/uvicorn)
+# Recommended: everything (core + channel bridge fastapi/uvicorn)
 pip install "llmwiki-suite[serve]"
 
 # Lightweight: core only (ingest/index/query/lint/eval, zero third-party deps)
@@ -61,8 +62,8 @@ llmwiki index          # 4. build retrieval index
 llmwiki query "..."    # 5. retrieve / Q&A
 ```
 
-Optional: `llmwiki lint` (broken links/vocab), `llmwiki eval` (score low-quality
-subsets with diagnostics), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
+Optional: `llmwiki lint` (broken links/vocab), `llmwiki eval` (recall@k / MRR
+quality evaluation), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
 
 ## Commands
 
@@ -74,7 +75,7 @@ subsets with diagnostics), `llmwiki serve` (HTTP chat bridge, needs `serve` extr
 | `llmwiki query "..."` | Retrieve most relevant sections; generate a full answer when `LLM_WIKI_API_KEY` is set |
 | `llmwiki lint` | Checks: broken links, vocab violations, naming conventions |
 | `llmwiki categories-sync` | Derive all categories actually used and write back to `llmwiki.toml` (`--apply` to write) |
-| `llmwiki eval` | Run recall@k / MRR against a built-in eval set |
+| `llmwiki eval` | Run recall@k / MRR against `<repo>/eval_queries.json`; `--seed` samples and writes a first eval set, `--demo` runs the built-in demo set (`--chart` outputs a self-contained SVG) |
 | `llmwiki serve` | Start FastAPI bridge (`/chat` `/recall` `/healthz`) |
 
 All commands accept `--repo <path>` to target a specific knowledge base (default: current dir).

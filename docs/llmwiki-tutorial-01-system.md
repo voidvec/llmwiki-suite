@@ -216,6 +216,9 @@ llmwiki ingest
 # 真正写入（补 FM / 重命名），并在最后自动重建索引
 llmwiki ingest --apply
 
+# 完全跳过 LLM 推断（不设 key / 想快速归一化时最稳，离线秒级）
+llmwiki ingest --apply --no-llm
+
 # 额外执行「建议的目录移动」（谨慎：会触发 git mv，需人工确认后使用）
 llmwiki ingest --apply --move
 ```
@@ -224,6 +227,7 @@ llmwiki ingest --apply --move
 # PowerShell — 等价
 llmwiki ingest
 llmwiki ingest --apply
+llmwiki ingest --apply --no-llm   # 跳过 LLM 推断，离线秒级
 ```
 
 它做的事（全部**行级编辑，绝不整体重写文件、绝不删 `---`**）：
@@ -233,8 +237,10 @@ llmwiki ingest --apply
 3. SHA256 去重检测（仅报告，**不自动删**）；
 4. 建议归类目录（**仅报告**，默认不跨目录移动）。
 
-> 配置了 `LLM_WIKI_API_KEY` 时，会尝试用 LLM 推断 `categories/tags/description`，
-> 但推断值**必须落到受控词表**才写入，否则留空兜底；未配 key 照样离线跑通。
+> 配置了 `LLM_WIKI_API_KEY` 时，会**按需**调用 LLM 推断 `categories/tags/description`——
+> 仅在文件缺这些字段时才推断（已齐则跳过），每文件至多一次，并有全局预算熔断
+> （默认 600s，慢 API 自动掐断）；推断值**必须落到受控词表**才写入，否则留空兜底；
+> 未配 key 或加 `--no-llm` 照样离线跑通（跳过全部 LLM 推断）。
 
 ### 3.3 重建检索索引（Ingest 的必须尾声）
 

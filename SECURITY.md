@@ -19,7 +19,9 @@
 - **丢到公网的通道服务默认受保护**：`llmwiki serve` 若暴露在公网，请设置
   `LLM_WIKI_BRIDGE_TOKEN` 保护问答接口；Telegram / 飞书 webhook 回调用各自的
   `*_SECRET_TOKEN` / `*_VERIFY_TOKEN` 做签名校验。
-- **推理预算熔断**：`llmwiki ingest --llm` 有预算熔断，防止意外的批量 API 费用。
+- **推理预算熔断**：`llmwiki ingest --apply` 的 LLM 推断有**全局总超时**（默认 600s，env
+  `LLM_WIKI_INGEST_LLM_TOTAL_TIMEOUT` 可调），防止慢 API / 意外批量调用造成无界费用；
+  不需要推断时可加 `--no-llm` 完全跳过（离线秒级）。
 - **最小权限原则**：工具只操作你指定的笔记库（`--repo` 指向），不扫系统目录。
 
 ## 你的笔记库安全

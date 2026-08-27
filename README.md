@@ -93,7 +93,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
 | `llmwiki categories-sync` | 从索引派生全部实际类别并写回 `llmwiki.toml`（`--apply` 写入） |
 | `llmwiki eval` | 用 `<repo>/eval_queries.json` 跑 recall@k / MRR；无评估集可 `--seed` 采样生成，`--demo` 跑内置示例集（`--chart` 输出自包含 SVG 图） |
-| `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`） |
+| `llmwiki serve` | 启动 FastAPI 桥接服务（`/chat` `/recall` `/healthz`，及 `/webui/chat` 网页问答、`/dashboard` 工作台） |
 
 所有命令支持 `--repo <path>` 显式指定库路径（默认取当前目录）。
 
@@ -114,6 +114,8 @@ export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # 可选：保护问答接口（�
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
+- **网页问答**：浏览器打开 `http://127.0.0.1:8000/webui/chat` → 直接输入问题问答（带引用来源）；
+  总览入口 `http://127.0.0.1:8000/dashboard`（索引健康 + 通道状态 + 各功能入口）。
 - **个人微信（推荐，免费官方 iLink 通道）**：浏览器打开
   `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定后在微信里直接给 bot 发消息即查即答。
 - **企业微信**：配置 `LLM_WIKI_WECOM_*` 环境变量后自动启用回调 / 主动推送通道。

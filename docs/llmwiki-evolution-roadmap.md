@@ -51,7 +51,7 @@ version: "1.0"
 | `llmwiki index` | ✔ BM25 + wikilink 图 | 召回基础 |
 | `llmwiki eval` | ✔ recall@K / MRR + `--chart` | **给召回定标尺**，进化才有「是否变好」的判据 |
 | pre-commit / CI | ✔ 质量门禁 | 每次改动不破基线 |
-| `llmwiki serve` | ✔ 微信/企业微信/飞书/Telegram | 已有 4 个通道，进化后回写有渠道 |
+| `llmwiki serve` | ✔ 微信/企业微信/飞书/Telegram + 网页问答（`/webui/chat`）/工作台（`/dashboard`） | 已有 4 通道 + 浏览器侧 UI，进化后回写有渠道有界面 |
 | P3 索引新鲜度 | ✔ 指纹比对告警 | 已具备「感知内容变了」的最小能力 |
 
 **验证**：`llmwiki eval --chart` 能画出 recall@K；`serve /healthz` 通道全部列出。

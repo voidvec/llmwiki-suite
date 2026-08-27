@@ -66,9 +66,35 @@ Remove-Item Env:LLM_WIKI_BRIDGE_TOKEN   # PowerShell（当前会话）
 
 ---
 
-## 2. 本地模拟验证（不触网，最快）
+## 2. 网页端点验证（`/webui/chat` + `/dashboard`）
 
-### 2.1 飞书 —— challenge 校验（平台接入前的敲门砖）
+> 网页问答页与工作台是 `serve` 自带的浏览器侧界面，本机 `curl` 即可验证可达性；
+> 完整页面交互建议浏览器直接打开看渲染。
+
+### 2.1 可达性
+
+```bash
+# 网页问答页（HTML）
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/webui/chat    # 期望 200
+# 工作台（HTML 导航总览）
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/dashboard     # 期望 200
+# 工作台状态聚合（JSON：索引 + 各通道归一化状态）
+curl -s http://127.0.0.1:8000/dashboard/status
+# 期望: {"ok":true,"bridge_token":...,"index":{...},"channels":[{name,state,...}]}
+```
+
+### 2.2 浏览器交互验收
+
+- 打开 `http://127.0.0.1:8000/dashboard`：应看到「入口 / 索引 / 通道 / API」四张卡片，
+  索引显示文档数 + 新鲜度，通道逐条显示状态，按钮在新标签页打开。
+- 点击「打开问答」→ `/webui/chat`：输入问题 → 返回回答 + 引用卡片；无回答时提示配置 `LLM_WIKI_API_KEY`。
+- 无 `LLM_WIKI_BRIDGE_TOKEN` 时 `/chat` 401，页面应给出提示（不会白屏）。
+
+---
+
+## 3. 本地模拟验证（不触网，最快）
+
+### 3.1 飞书 —— challenge 校验（平台接入前的敲门砖）
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/feishu/callback \
@@ -77,7 +103,7 @@ curl -s -X POST http://127.0.0.1:8000/feishu/callback \
 # 期望: {"challenge":"ch_abc123"}  ← 返回原文即通过（飞书开放平台也能判定成功）
 ```
 
-### 2.2 飞书 —— 带签名校验的文本事件（模拟真实事件）
+### 3.2 飞书 —— 带签名校验的文本事件（模拟真实事件）
 
 ```bash
 # 用一个 Python 脚本拼正确签名（因为要对 body 做 HMAC）
@@ -115,7 +141,7 @@ PY
 > `body` 必须同字节，否则验签必失败。若未设 `FEISHU_VERIFY_TOKEN`，飞书事件可
 > 不用签名直接 POST（server 仅走可选校验）。
 
-### 2.3 Telegram —— 文本消息事件注入（验证回环）
+### 3.3 Telegram —— 文本消息事件注入（验证回环）
 
 ```bash
 # 无 secret token 时（未设 TELEGRAM_SECRET_TOKEN）：
@@ -167,20 +193,22 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 
 ---
 
-## 3. 常见问题
+## 4. 常见问题
 
 | 现象 | 原因 | 解法 |
 |------|------|------|
 | `/healthz` 里 feishu 显示 not configured | `FEISHU_APP_ID` 或 `FEISHU_APP_SECRET` 缺配 | 补全 env 后重启 serve |
-| 飞书 challenge 返回非原文 | 回调地址填错 / 端口不通 | 先用第 2 节本地 curl 验证 |
+| 飞书 challenge 返回非原文 | 回调地址填错 / 端口不通 | 先用第 3 节本地 curl 验证 |
 | Telegram 返回 200 但 bot 不回复 | webhook 未设 / secret token 不对 | `getWebhookInfo` 看并发；核对 header |
 | 报 `cannot unpack non-iterable` | 测试替身 mock 结构不对 | 用真实 `assistant`（本文档场景不会出现） |
 
 ---
 
-## 4. 验收清单（本地）
+## 5. 验收清单（本地）
 
 - [ ] `serve` 启动无异常，`/healthz` 显示 feishu+telegram configured ✅
+- [ ] `/webui/chat`、`/dashboard` 返回 200，`/dashboard/status` 返回索引 + 通道状态
+- [ ] 浏览器打开 `/dashboard`：入口 / 索引 / 通道 / API 卡片渲染正常
 - [ ] 飞书 challenge 本地 curl 返回原文
 - [ ] 飞书带签名字段事件 POST 200
 - [ ] 无 secret token 的 Telegram 回调 POST 200；错误 secret → 403

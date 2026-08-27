@@ -53,7 +53,7 @@ flowchart TB
 | 共享核心 | `kb_core.py` | 链接判死铁律、frontmatter 解析、受控词表（唯一事实源） | 无 |
 | 应答编排 | `assistant.py` → `KbAssistant` | 召回 → 拼 prompt → 调 LLM → 附来源（与传输解耦） | 无（urllib 调 LLM） |
 | 通道 | `channel_base.py` + `wecom_adapter.py` + `ilink_adapter.py` | 把外部消息翻译成 `assistant.answer()` 调用，再把回答送回 | WeCom 需 fastapi/pycryptodome；iLink 仅标准库 |
-| 传输/编排 | `channels/wechat_bridge.py`（FastAPI） | 装配 KbAssistant + 通道；生命周期；对外 HTTP 端点 | fastapi/uvicorn |
+| 传输/编排 | `channels/wechat_bridge.py`（FastAPI） | 装配 KbAssistant + 通道；生命周期；对外 HTTP 端点（`/chat` `/recall` `/healthz` JSON 接口，`/webui/chat` 网页问答，`/dashboard` 工作台） | fastapi/uvicorn |
 
 **关键原则**：索引是单一事实源，`llmwiki index` 是所有写入路径的最后一环；
 链接铁律与受控词表只在 `kb_core.py` 实现一次，召回/lint/ingest 共用，避免三处各写一套再各自踩坑。
@@ -135,6 +135,9 @@ sequenceDiagram
 
 ## 4. 安全与部署边界
 
+- **暴露形态（两种，不做第三种）**：A 仅自己（Tailscale / ZeroTier，设备级认证）+ B 团队内网（反向代理 + 网关 Basic Auth）。**套件永远只监听 `127.0.0.1`**，不直连公网，认证收口在网关层。
+- **网页端点信任模型**：`/webui/chat`、`/dashboard` 等页面继承「能访问到 127.0.0.1:8000 即已过身份」的信任
+  （网关层决定），套件内部**不做登录态/会话保护**；`/api/*` 若未来收敛暴露公网，网关必须挡 `/api/*` 放行 `/webui/*`。
 - **网关令牌**：`/chat`、`/recall` 受 `LLM_WIKI_BRIDGE_TOKEN` 保护；服务默认绑 `127.0.0.1`，仅企业微信回调经内网穿透面向公网（沿用第二次评审 R3）。
 - **凭证全部走环境变量**，绝不硬编码（`LLM_WIKI_*` 前缀下：`API_KEY` / `BRIDGE_TOKEN` / `WECOM_*` / `ILINK_*`）。
 - **iLink 无需公网**：客户端主动出网长轮询，家庭宽带即可；企业微信回调才需公网/穿透。

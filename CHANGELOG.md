@@ -29,6 +29,37 @@
 - extras 更名：`[wechat]` → `[serve]`（该依赖组实际驱动所有通道的 `llmwiki serve`，不再单指微信）；`[wechat]` 保留为兼容别名。
 - 版本 0.1.1 → 0.1.2（发布新 extras 元数据）。
 
+## [0.1.5] - 2026-08-27
+
+### 新增
+- **网页问答页 `GET /webui/chat`**（P0）：自包含 HTML（无外部 CDN、无构建），单栏对话 + 顶部
+  `top_k` / categories / tags 筛选 + 回答下方引用卡（path/title/score）+ 索引过期提示；
+  与 `POST /chat` 共用同一 `assistant.answer()` 后端。浏览器打开 `localhost:8000/webui/chat` 即用。
+- **工作台 `GET /dashboard`**（P1）：导航总台 + 状态聚合——索引健康（文档数/来源/生成时间/新鲜度）、
+  通道状态（`connected > configured > 未配置` 归一化视图）、各功能入口按钮。
+- **`GET /dashboard/status`**：JSON 状态聚合端点（`ok / bridge_token / index / channels`），
+  通道字段统一归一化为 `state / state_cls` 视图（对齐 iLink 的 `connected/has_token` 与
+  wecom/feishu/telegram 的 `configured`）。
+- 同步文档：README / README.en / getting-started / architecture / channel-verify / evolution-roadmap
+  补网页问答与工作台说明。
+
+### 修复
+- **iLink 扫码激活后页面不跳转**：`activate()` 在 `get_qrcode_status` 返回 `confirmed` 时，
+  除保存 `bot_token / baseurl / login_time` 外补设 `self.connected = True`——此前该标志
+  仅在收消息循环收到首条消息后才置位，导致 WebUI 轮询 `/ilink/status` 永远停在「等待扫码
+  确认…」（实际扫码已成功、token 已落盘）。
+- **`/dashboard` 空白页**：页面脚本末尾误调 `fetch()`（原生 API，无参数）导致自定义
+  `load()` 从不执行，改为 `load()`。
+- dashboard 按钮（打开问答 / 扫码绑定 / API 文档）加 `target="_blank"`，新标签页打开。
+
+### 测试
+- 新增 `TestIlinkActivate` 回归测试（扫码 confirmed 后 `connected=True` 且保存 token；
+  未确认不置位）。`test_core.py` 40 → 42 passed。
+
+### 文档
+- `docs/llmwiki-verify.md` 更名并修订为 `docs/llmwiki-local-verify.md`（用户资产边界 + 全角→连字符重建流程）。
+- `docs/llmwiki-webui-dashboard-design.md` 本地设计稿（评审依据，不提交远程；实施后回填联动文档）。
+
 ## [0.1.4] - 2026-08-27
 
 ### 新增
@@ -118,5 +149,9 @@
   P4 via_link 补位门槛、top_k 默认收紧 4（节流 ~35% token）。
 - S1 核心引擎可安装化（pip 化迁移）、S2 套件分发（PyPI 发布）。
 
+[0.1.5]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/voidvec/llmwiki-suite/releases/tag/v0.1.0

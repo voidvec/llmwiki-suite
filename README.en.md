@@ -76,7 +76,7 @@ quality evaluation), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
 | `llmwiki lint` | Checks: broken links, vocab violations, naming conventions |
 | `llmwiki categories-sync` | Derive all categories actually used and write back to `llmwiki.toml` (`--apply` to write) |
 | `llmwiki eval` | Run recall@k / MRR against `<repo>/eval_queries.json`; `--seed` samples and writes a first eval set, `--demo` runs the built-in demo set (`--chart` outputs a self-contained SVG) |
-| `llmwiki serve` | Start FastAPI bridge (`/chat` `/recall` `/healthz`) |
+| `llmwiki serve` | Start FastAPI bridge (`/chat` `/recall` `/healthz`, plus `/webui/chat` web Q&A and `/dashboard` workspace) |
 
 All commands accept `--repo <path>` to target a specific knowledge base (default: current dir).
 
@@ -97,6 +97,9 @@ export LLM_WIKI_BRIDGE_TOKEN="my-secret"       # optional: protect the Q&A endpo
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
+- **Web Q&A:** open `http://127.0.0.1:8000/webui/chat` in a browser and ask directly
+  (answers with cited sources); the workspace overview is at `http://127.0.0.1:8000/dashboard`
+  (index health + channel status + entry points).
 - **Personal WeChat (recommended):** open `http://127.0.0.1:8000/ilink/webui` in a
   browser, scan the QR with your phone WeChat, and chat with the bot directly.
 - **WeCom:** set the `LLM_WIKI_WECOM_*` env vars to enable callback/push channels.

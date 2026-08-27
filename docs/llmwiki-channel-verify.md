@@ -103,6 +103,22 @@ curl -s -X POST http://127.0.0.1:8000/chat \
 # 返回值结构：{"answer":..., "candidates":[...], "index_stale":null}
 ```
 
+### 2.4 SSE 流式（P3：打字机 / 可中断）
+
+```bash
+# 带 Accept: text/event-stream（或 ?stream=1）→ text/event-stream 事件流
+curl -N -X POST "http://127.0.0.1:8000/api/chat" \
+  -H "Content-Type: application/json" -H "Accept: text/event-stream" \
+  -d '{"query":"如何配置 lint"}'
+# 事件序列（每帧两行 + 空行）：
+#   event: meta        data: {"index_stale": null}            ← 索引过期告警（先行）
+#   event: candidates  data: {"candidates": [...]}            ← 引用卡列表
+#   event: delta       data: {"text": "…"}                    ← 回答增量（多条，打字机）
+#   event: done        data: {"answer": "全文…"}               ← 结束帧
+curl -N -X POST "http://127.0.0.1:8000/api/chat?stream=1" ...   # 等价触发方式
+# 不带 Accept 头 / ?stream → 保持原 JSON 响应（老客户端零影响）
+```
+
 ---
 
 ## 3. 本地模拟验证（不触网，最快）

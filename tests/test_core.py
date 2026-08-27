@@ -6,6 +6,8 @@ llmwiki 包，保证「测试的就是发布的」，不注入仓库内 src 路�
 
 from pathlib import Path
 
+import json
+
 import pytest
 
 from llmwiki import kb_core, recall  # noqa: E402
@@ -463,6 +465,7 @@ class TestApiRoutes:
         import os
         monkeypatch.setenv("KB_INDEX", str(tmp_path / "kb-index.json"))
         from llmwiki.channels import wechat_bridge as wb
+        monkeypatch.setattr(wb, "BRIDGE_TOKEN", "")  # 隔离外部残留口令
         return wb
 
     def test_api_and_legacy_routes_registered(self, monkeypatch, tmp_path):
@@ -480,3 +483,127 @@ class TestApiRoutes:
         wb = self._bridge(monkeypatch, tmp_path)
         js = wb._CHAT_WEBUI_HTML
         assert "'/api/chat'" in js, "网页问答页应调用正式接口 /api/chat"
+
+
+class TestSseStream:
+    """P3 SSE 流式：/api/chat 带 Accept: text/event-stream 时返回事件流，
+    事件序 meta → candidates → delta* → done；默认无该头保持 JSON。"""
+
+    @staticmethod
+    def _bridge(monkeypatch, tmp_path):
+        import os
+        monkeypatch.setenv("KB_INDEX", str(tmp_path / "kb-index.json"))
+        from llmwiki.channels import wechat_bridge as wb
+        # 关键：BRIDGE_TOKEN 在模块 import 时求值并缓存；外部环境可能残留
+        # LLM_WIKI_BRIDGE_TOKEN，导致守卫 401。测试显式置空模块变量
+        # （比 delenv 可靠——模块可能已被其它测试类首次 import 缓存）。
+        monkeypatch.setattr(wb, "BRIDGE_TOKEN", "")
+        return wb
+
+    @staticmethod
+    def _mock(monkeypatch, tmp_path, answer_stream):
+        wb = TestSseStream._bridge(monkeypatch, tmp_path)
+        monkeypatch.setattr(wb, "_stale_warning", lambda: None)
+        monkeypatch.setattr(wb.assistant, "answer_stream", answer_stream)
+        return wb
+
+    @staticmethod
+    def _flatten(text: str) -> list[dict]:
+        """把 SSE 文本解析为 [{"event": ..., "data": ...}, ...]。"""
+        frames = []
+        for frame in text.split("\n\n"):
+            if not frame.strip():
+                continue
+            ev, data = "message", ""
+            for line in frame.splitlines():
+                if line.startswith("event:"):
+                    ev = line[6:].strip()
+                elif line.startswith("data:"):
+                    data += line[5:].strip()
+            if not data:
+                continue
+            try:
+                payload = json.loads(data)
+            except Exception:
+                payload = data
+            frames.append({"event": ev, "data": payload})
+        return frames
+
+    def test_accept_header_triggers_sse(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+        wb = self._mock(
+            monkeypatch, tmp_path,
+            lambda q, top_k=4, categories=None, tags=None: iter([
+                {"candidates": [{"path": "a.md", "title": "A", "score": 2.5}]},
+                "你",
+                "好",
+            ]))
+        client = TestClient(wb.app)
+        resp = client.post("/api/chat", headers={"Accept": "text/event-stream"},
+                           json={"query": "hi"})
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/event-stream")
+        frames = self._flatten(resp.text)
+        names = [f["event"] for f in frames]
+        assert names[0] == "meta"          # 先行索引过期告警
+        assert "candidates" in names       # 候选（引用卡）先于正文
+        assert "delta" in names            # 正文增量（打字机）
+        assert names[-1] == "done"         # 结束帧
+        answer = "".join(f["data"].get("text", "") for f in frames
+                         if f["event"] == "delta")
+        assert answer == "你好"
+
+    def test_stream_query_flag_also_sse(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+        wb = self._mock(
+            monkeypatch, tmp_path,
+            lambda q, top_k=4, categories=None, tags=None: iter([
+                {"candidates": []}, "x"]))
+        client = TestClient(wb.app)
+        resp = client.post("/api/chat?stream=1", json={"query": "hi"})
+        assert resp.headers["content-type"].startswith("text/event-stream")
+        assert [f["event"] for f in self._flatten(resp.text)][0] == "meta"
+
+    def test_legacy_chat_alias_supports_sse(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+        wb = self._mock(
+            monkeypatch, tmp_path,
+            lambda q, top_k=4, categories=None, tags=None: iter([
+                {"candidates": []}, "别名"]))
+        client = TestClient(wb.app)
+        resp = client.post("/chat", headers={"Accept": "text/event-stream"},
+                           json={"query": "hi"})
+        assert resp.headers["content-type"].startswith("text/event-stream")
+
+    def test_no_accept_stays_json(self, monkeypatch, tmp_path):
+        """不带 Accept 头 / ?stream → 保持 JSON（老客户端零影响）。"""
+        from fastapi.testclient import TestClient
+        wb = self._mock(
+            monkeypatch, tmp_path,
+            lambda q, top_k=4, categories=None, tags=None: iter([
+                {"candidates": []}, "x"]))
+        monkeypatch.setattr(wb.assistant, "answer",
+                            lambda *a, **k: ("好", [{"path": "a.md",
+                                                     "title": "A",
+                                                     "score": 1.0}]))
+        client = TestClient(wb.app)
+        resp = client.post("/api/chat", json={"query": "hi"})
+        assert resp.status_code == 200
+        assert resp.json()["answer"] == "好"
+        assert "text/event-stream" not in resp.headers.get("content-type", "")
+
+    def test_not_found_frame(self, monkeypatch, tmp_path):
+        """无命中：candidates 事件携带 not_found 文案，无 delta，done 落确。"""
+        from fastapi.testclient import TestClient
+        wb = self._mock(
+            monkeypatch, tmp_path,
+            lambda q, top_k=4, categories=None, tags=None: iter([
+                {"candidates": [], "not_found": "知识库中未找到相关信息。"}]))
+        client = TestClient(wb.app)
+        resp = client.post("/api/chat", headers={"Accept": "text/event-stream"},
+                           json={"query": "no-hit"})
+        frames = self._flatten(resp.text)
+        # meta + candidates(not_found) + done = 3 帧，无 delta
+        assert [f["event"] for f in frames] == ["meta", "candidates", "done"]
+        cand = frames[1]["data"]
+        assert cand["not_found"] == "知识库中未找到相关信息。"

@@ -6,6 +6,12 @@
 ## [Unreleased]
 
 ### 新增
+- **SSE 流式应答（P3）**：`POST /api/chat`（及 `/chat` 别名）在请求头
+  `Accept: text/event-stream` 或 `?stream=1` 时返回 `text/event-stream` 事件流，
+  事件序列 `meta`（索引过期告警）→ `candidates`（引用卡）→ `delta*`（回答增量）
+  → `done`（全文）；不带该头保持原 JSON 响应，老客户端零影响。
+  网页问答 `/webui/chat` 已接入打字机效果 + 「停止」按钮（`AbortController` 中断），
+  无 `ReadableStream` 时自动降级回普通 JSON。
 - 仓库门面化（公众号引流铺垫）：README 顶部横幅 `assets/banner.png`、30 秒快速体验区与终端演示图
   `assets/demo-term.png`、社交预览图 `assets/social-preview.png`、底部「作者与公众号」区（二维码占位）。
 - 新增 `CONTRIBUTING.md`（贡献流程：开发环境/测试/提交规范/PR）与 `SECURITY.md`（漏洞报告与密钥-EV规范）。

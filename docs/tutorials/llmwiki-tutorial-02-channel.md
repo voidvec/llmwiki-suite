@@ -322,6 +322,7 @@ curl -F "url=https://<你的域名>/telegram/callback" \
 | 答案被截断 1800 字 | iLink 单条限制已截断；更长需分段发送 |
 | 24h 后不再回复 | 会话过期，按 §4.4 重激活 |
 | `/api/chat` 或 `/chat` 返回 401 | 设了 `LLM_WIKI_BRIDGE_TOKEN`，请求带 `?token=xxx` 或 `X-Bridge-Token: xxx` |
+| 想要流式打字机 | `/api/chat`（含 `/chat` 别名）带请求头 `Accept: text/event-stream` 或 `?stream=1` → SSE 事件流；网页问答 `/webui/chat` 已默认启用 |
 | 端口被占 | `llmwiki serve --port 8001` 或释放原端口 |
 | 换非 OpenAI 厂商 | 一并设 `LLM_WIKI_BASE_URL` + `LLM_WIKI_MODEL`；要求兼容 OpenAI `/chat/completions` |
 | 弱图 / 不显示 | 缺 `qrcode` 库降级为链接；`pip install qrcode` 恢复 |

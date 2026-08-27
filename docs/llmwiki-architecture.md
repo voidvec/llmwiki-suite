@@ -51,9 +51,9 @@ flowchart TB
 | 存储/索引 | `kb-index.json`（生成器 `llmwiki index`） | 单一事实源：16 字段文档（含正文 `body_text` / `body_text_clean` 双变体）+ 分类/标签倒排表 | 无 |
 | 召回 | `recall.py` → `KbRetriever` | BM25 召回（K1=1.5/B=0.75，正文索引 + Wikilink 图扩展补位，`min_score=0.15` + 每词阈值 1.0 查询长度感知门槛）+ 章节级取数 + 索引过期检测（P3：`check_freshness()` 磁盘指纹三向比对，~11 ms/188 篇） | 无（标准库） |
 | 共享核心 | `kb_core.py` | 链接判死铁律、frontmatter 解析、受控词表（唯一事实源） | 无 |
-| 应答编排 | `assistant.py` → `KbAssistant` | 召回 → 拼 prompt → 调 LLM → 附来源（与传输解耦） | 无（urllib 调 LLM） |
+| 应答编排 | `assistant.py` → `KbAssistant` | 召回 → 拼 prompt → 调 LLM → 附来源（与传输解耦）；`answer_stream()` / `call_llm_stream()` 提供流式生成（P3：`stream=True` 逐 chunk） | 无（urllib 调 LLM） |
 | 通道 | `channel_base.py` + `wecom_adapter.py` + `ilink_adapter.py` | 把外部消息翻译成 `assistant.answer()` 调用，再把回答送回 | WeCom 需 fastapi/pycryptodome；iLink 仅标准库 |
-| 传输/编排 | `channels/wechat_bridge.py`（FastAPI） | 装配 KbAssistant + 通道；生命周期；对外 HTTP 端点（`/api/chat` `/api/recall` JSON 接口、`/chat` `/recall` 兼容别名、`/healthz`，`/webui/chat` 网页问答，`/dashboard` 工作台） | fastapi/uvicorn |
+| 传输/编排 | `channels/wechat_bridge.py`（FastAPI） | 装配 KbAssistant + 通道；生命周期；对外 HTTP 端点（`/api/chat` `/api/recall` JSON 接口（`/api/chat` 支持 SSE 流式）、`/chat` `/recall` 兼容别名、`/healthz`，`/webui/chat` 网页问答，`/dashboard` 工作台） | fastapi/uvicorn |
 
 **关键原则**：索引是单一事实源，`llmwiki index` 是所有写入路径的最后一环；
 链接铁律与受控词表只在 `kb_core.py` 实现一次，召回/lint/ingest 共用，避免三处各写一套再各自踩坑。

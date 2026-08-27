@@ -11,8 +11,12 @@ wechat_bridge.py -- LlmWiki 微信问答桥接（FastAPI 服务 + 通道编排�
 本文件只做「装配 + 生命周期 + 对外 HTTP 端点」，不含任何业务/加解密细节：
 
   POST /api/chat      召回 + LLM 生成（受 BRIDGE_TOKEN 保护，正式机器接口）
+                      · 默认 JSON：{answer, candidates, index_stale}
+                      · SSE 流式（P3）：请求头 Accept: text/event-stream 或
+                        ?stream=1 → text/event-stream，事件 meta→candidates→
+                        delta→done（打字机，前端可中断）
   POST /api/recall     仅召回候选（受 BRIDGE_TOKEN 保护，正式机器接口）
-  POST /chat           兼容别名，等价 /api/chat（历史 URL 保持可用）
+  POST /chat           兼容别名，等价 /api/chat（含 SSE，历史 URL 保持可用）
   POST /recall         兼容别名，等价 /api/recall
   GET  /healthz        通道与网关状态聚合
   GET  /ilink/qrcode  拉取 iLink 绑定二维码（图片 base64）
@@ -31,12 +35,13 @@ wechat_bridge.py -- LlmWiki 微信问答桥接（FastAPI 服务 + 通道编排�
 运行：uvicorn llmwiki.channels.wechat_bridge:app --host 127.0.0.1 --port 8000
        或 llmwiki serve（CLI 封装，见 llmwiki/cli.py）
 """
+import json
 import os
 import sys
 import threading
 
 from fastapi import FastAPI, Depends, Query, Header, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from ..assistant import KbAssistant
 from ..config import load_config, resolve_repo
@@ -114,7 +119,7 @@ class QueryReq(BaseModel):
 
 
 def _stale_warning():
-    """P3：索引过期告警（None = 一致）。旧版索引（无指纹）返回提示重建。"""
+    """索引过期告警（None = 一致）。旧版索引（无指纹）返回提示重建。"""
     fr = assistant.retriever.check_freshness()
     if fr.unknown:
         return "索引由旧版生成（无过期指纹），建议重建：llmwiki index"
@@ -123,7 +128,44 @@ def _stale_warning():
     return None
 
 
-def _chat(req: QueryReq):
+# --- P3：SSE 事件帧（与前端打字机约定的事件名）---
+def _sse_event(name: str, payload) -> str:
+    """把事件编码为一行 SSE 帧：`event: X\ndata: <json>\n\n`。"""
+    return "event: %s\ndata: %s\n\n" % (name, json.dumps(payload, ensure_ascii=False))
+
+
+def _chat_stream(req: QueryReq):
+    """P3：/api/chat 的 SSE 流式应答。事件序列：
+      meta        {strict_k: ..., index_stale: ...}      —— 启动即发（含过期提示）
+      candidates  {candidates: [...]}                     —— 候选列表（引用卡）
+      delta       {text: "..."}                           —— 回答增量（打字机）
+      done        {answer: "全文"}                         —— 结束（含未命中话术）
+    任何时刻前端 disconnect（AbortController）都会停止消费本生成器。"""
+    stale = _stale_warning()
+    yield _sse_event("meta", {"index_stale": stale})
+    buf = []
+    for item in assistant.answer_stream(req.query, req.top_k, req.categories,
+                                        req.tags):
+        if isinstance(item, dict):
+            if "not_found" in item:
+                buf.append(item["not_found"])
+                yield _sse_event("candidates", {"candidates": [],
+                                                "not_found": item["not_found"]})
+            else:
+                yield _sse_event("candidates", item)
+        else:
+            buf.append(item)
+            yield _sse_event("delta", {"text": item})
+    yield _sse_event("done", {"answer": "".join(buf)})
+
+
+def _chat(req: QueryReq, stream: bool = False):
+    if stream:
+        # SSE：content-type 与事件帧由 StreamingResponse 承担，
+        # _chat 只负责给前置层（FastAPI 端点）返回流。
+        # 注意：stream 未触发时返回普通 JSON（兼容老客户端）。
+        return StreamingResponse(_chat_stream(req),
+                                 media_type="text/event-stream")
     answer, candidates = assistant.answer(req.query, req.top_k, req.categories, req.tags)
     return {"answer": answer, "candidates": candidates,
             "index_stale": _stale_warning()}
@@ -146,9 +188,15 @@ def _recall(req: QueryReq):
     }
 
 
-# 正式机器接口（P2 路由收敛的目标前缀）
+# 正式机器接口（P2 路由收敛的目标前缀；P3 支持 SSE 流式）
 @app.post("/api/chat", dependencies=[Depends(require_bridge_token)])
-def api_chat(req: QueryReq):
+def api_chat(req: QueryReq,
+             stream: bool = Query(False),
+             accept: str = Header(None, alias="Accept")):
+    # P3：客户端声明接受 SSE（标准头）或显式 ?stream=1 时走流式；
+    # 否则保持既有 JSON 响应（老客户端零影响）。
+    if stream or (accept and "text/event-stream" in accept):
+        return _chat(req, stream=True)
     return _chat(req)
 
 
@@ -157,9 +205,12 @@ def api_recall(req: QueryReq):
     return _recall(req)
 
 
-# 兼容别名（历史 URL 保持可用）
+# 兼容别名（历史 URL 保持可用，等同 /api/* 全部语义）
 @app.post("/chat", dependencies=[Depends(require_bridge_token)])
-def chat(req: QueryReq):
+def chat(req: QueryReq,
+        accept: str = Header(None, alias="Accept")):
+    if accept and "text/event-stream" in accept:
+        return _chat(req, stream=True)
     return _chat(req)
 
 
@@ -342,6 +393,8 @@ _CHAT_WEBUI_HTML = """<!doctype html>
   #send { background:#1677ff; color:#fff; border:none; border-radius:8px;
           padding:10px 24px; font-size:14px; cursor:pointer; }
   #send:disabled { background:#a8c4f7; cursor:not-allowed; }
+  #stop { background:#e34; color:#fff; border:none; border-radius:8px;
+          padding:10px 24px; font-size:14px; cursor:pointer; display:none; }
   .err { color:#e34; font-size:13px; }
 </style>
 </head>
@@ -363,61 +416,139 @@ _CHAT_WEBUI_HTML = """<!doctype html>
 <div id="composer">
   <textarea id="input" placeholder="向知识库提问…（Enter 发送，Shift+Enter 换行）"></textarea>
   <button id="send" disabled>发送</button>
+  <button id="stop" disabled>停止</button>
 </div>
 <script>
 const msgs=document.getElementById('msgs'), input=document.getElementById('input'),
-      send=document.getElementById('send'), staleEl=document.getElementById('stale');
+      send=document.getElementById('send'), staleEl=document.getElementById('stale'),
+      stopBtn=document.getElementById('stop');
 let token = localStorage.getItem('llmwiki_token') || '';
+let abort = null;   // P3：当前请求的 AbortController（「停止」按钮）
 const esc = s => String(s).replace(/[&<>"']/g,
   c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function addEl(cls, html){ const d=document.createElement('div'); d.className=cls;
   d.innerHTML=html; msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; return d; }
-async function api(body){
-  const url = '/api/chat' + (token ? '?token='+encodeURIComponent(token) : '');
-  const r = await fetch(url, {method:'POST',
-    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-  if(r.status === 401){
-    const t = prompt('服务端配置了 BRIDGE_TOKEN，请输入提问口令：');
+
+// ---- 普通 JSON 请求（降级路径）----
+async function jsonApi(body){
+  const url='/api/chat'+(token?'?token='+encodeURIComponent(token):'');
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)});
+  if(r.status===401){
+    const t=prompt('服务端配置了 BRIDGE_TOKEN，请输入提问口令：');
     if(!t) throw new Error('缺少提问口令（BRIDGE_TOKEN）');
-    token = t; localStorage.setItem('llmwiki_token', t); return api(body);
+    token=t; localStorage.setItem('llmwiki_token',t); return jsonApi(body);
   }
   if(!r.ok) throw new Error('请求失败：HTTP '+r.status);
   return r.json();
 }
-function renderRefs(data){
-  if(data.index_stale){ staleEl.style.display='block';
-    staleEl.textContent='⚠️ '+data.index_stale; }
-  if(!data.candidates || !data.candidates.length) return;
+
+// ---- SSE 流式请求（打字机）；解析失败/环境不支持 → 抛错由调用方降级 JSON ----
+function renderRefs(candidates){
+  if(!candidates || !candidates.length) return;
   const box=document.createElement('div'); box.className='refs';
-  box.innerHTML = '<div style="font-size:12px;color:#999;margin-top:8px">引用</div>' +
-    data.candidates.map(c=>'<div class="ref"><div class="t">'+esc(c.title||c.path)+
+  box.innerHTML='<div style="font-size:12px;color:#999;margin-top:8px">引用</div>'+
+    candidates.map(c=>'<div class="ref"><div class="t">'+esc(c.title||c.path)+
       '</div><div class="p"><code>'+esc(c.path)+'</code></div>'+
       '<div class="s">score '+Number(c.score).toFixed(2)+'</div></div>').join('');
   msgs.appendChild(box); msgs.scrollTop=msgs.scrollHeight;
 }
+async function streamAsk(body, pending){
+  const ctrl=new AbortController(); abort=ctrl;
+  stopBtn.style.display='inline-block'; stopBtn.disabled=false;
+  stopBtn.onclick=()=>{ try{ ctrl.abort(); }catch(e){} };
+  try{
+    const url='/api/chat?stream=1'+(token?'&token='+encodeURIComponent(token):'');
+    const r=await fetch(url,{method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
+      body:JSON.stringify(body), signal:ctrl.signal});
+    if(r.status===401){
+      const t=prompt('服务端配置了 BRIDGE_TOKEN，请输入提问口令：');
+      if(!t) throw new Error('缺少提问口令（BRIDGE_TOKEN）');
+      token=t; localStorage.setItem('llmwiki_token',t);
+      return streamAsk(body, pending);   // 重新走（口令已存）
+    }
+    if(!r.ok) throw new Error('请求失败：HTTP '+r.status);
+    if(!r.body) throw new Error('环境不支持流式（无 body）');
+    const reader=r.body.getReader(), decoder=new TextDecoder();
+    let buf='';
+    while(true){
+      const {done, value}=await reader.read();
+      if(done) break;
+      buf+=decoder.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf('\\n\\n'))>=0){
+        const frame=buf.slice(0,idx); buf=buf.slice(idx+2);
+        let ev='message', data='';
+        frame.split('\\n').forEach(line=>{
+          if(line.startsWith('event:')) ev=line.slice(6).trim();
+          else if(line.startsWith('data:')) data+=line.slice(5).trim();
+        });
+        if(!data) continue;
+        let obj; try{ obj=JSON.parse(data); }catch(e){ continue; }
+        if(ev==='meta' && obj.index_stale){
+          staleEl.style.display='block'; staleEl.textContent='⚠️ '+obj.index_stale;
+        }else if(ev==='candidates'){
+          renderRefs(obj.candidates||[]);
+          if(obj.not_found) pending.textContent=obj.not_found;
+        }else if(ev==='delta'){
+          pending.textContent+=(obj.text||'');
+          msgs.scrollTop=msgs.scrollHeight;
+        }
+        // done 帧无需处理（正文已逐段累积）
+      }
+    }
+  }catch(e){
+    // 中断（用户点「停止」）不算故障
+    if(ctrl.signal.aborted) return;
+    throw e;
+  }
+}
+
+async function ask(body, pending){
+  // P3 优先流式；无 ReadableStream（老浏览器）时降级 JSON
+  if(window.ReadableStream){
+    try{
+      await streamAsk(body, pending);
+      return;
+    }catch(e){
+      if(abort && abort.signal.aborted) return;   // 停止即结束（不报错）
+      throw e;
+    }
+  }
+  const d=await jsonApi(body);
+  pending.textContent=d.answer||'（无回答）';
+  if(d.index_stale){ staleEl.style.display='block'; staleEl.textContent='⚠️ '+d.index_stale; }
+  renderRefs(d.candidates);
+}
+
 async function sendMsg(){
   const q=input.value.trim(); if(!q) return;
   addEl('msg user', esc(q)); input.value='';
   send.disabled=true;
-  const pending=addEl('msg bot', '思考中…');
+  const pending=addEl('msg bot','思考中…');
+  const cats=document.getElementById('cats').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const tgs =document.getElementById('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const body={query:q, top_k:parseInt(document.getElementById('topk').value,10)||4,
+              categories:cats, tags:tgs};
   try{
-    const cats=document.getElementById('cats').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const tgs =document.getElementById('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const d = await api({query:q, top_k:parseInt(document.getElementById('topk').value,10)||4,
-                         categories:cats, tags:tgs});
-    pending.textContent = d.answer || '（无回答）';
-    renderRefs(d);
-  }catch(e){ pending.className='msg bot err'; pending.textContent='请求失败：'+e.message; }
-  send.disabled=false; input.focus();
+    await ask(body, pending);
+    if(pending.textContent==='思考中…') pending.textContent='（无回答）';
+    pending.className='msg bot';
+  }catch(e){
+    pending.className='msg bot err'; pending.textContent='请求失败：'+e.message;
+  }finally{
+    send.disabled=false; stopBtn.style.display='none'; abort=null; input.focus();
+  }
 }
 input.addEventListener('keydown', ev=>{
   if(ev.key==='Enter' && !ev.shiftKey){ ev.preventDefault(); sendMsg(); }
 });
 send.addEventListener('click', sendMsg);
-input.addEventListener('input', ()=>{ send.disabled = !input.value.trim(); });
+input.addEventListener('input', ()=>{ send.disabled=!input.value.trim(); });
 fetch('/healthz').then(r=>r.json()).then(d=>{
   document.getElementById('svc').textContent =
-    d && d.bridge_token ? '已启用提问口令' : '本地模式（未配置口令）';
+    d&&d.bridge_token?'已启用提问口令':'本地模式（未配置口令）';
 }).catch(()=>{});
 input.focus();
 </script>

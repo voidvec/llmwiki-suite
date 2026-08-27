@@ -107,8 +107,17 @@ export LLM_WIKI_BRIDGE_TOKEN="my-secret"# 建议：保护 /api/chat /api/recall�
 llmwiki serve --host 127.0.0.1 --port 8000
 ```
 
-- **网页问答**（无需 IM，浏览器即用）：打开 `http://127.0.0.1:8000/webui/chat` → 输入问题即查即答（含引用来源）；
+- **网页问答**（无需 IM，浏览器即用）：打开 `http://127.0.0.1:8000/webui/chat` → 输入问题即查即答
+  （含引用来源；**SSE 流式打字机**：回答边生成边显示，可点「停止」中断）；
   总览入口 `http://127.0.0.1:8000/dashboard`（索引健康 + 通道状态 + 各功能入口）。
+- 命令行消费方可用 SSE 流式接口（与网页同源）：
+  ```bash
+  curl -N -X POST "http://127.0.0.1:8000/api/chat?token=my-secret" \
+       -H "Content-Type: application/json" -H "Accept: text/event-stream" \
+       -d '{"query":"BM25 是什么"}'
+  # 事件序：event: meta → event: candidates → event: delta* → event: done
+  # 不带 Accept 头则保持原 JSON 响应（{answer, candidates, index_stale}）
+  ```
 - 浏览器打开 `http://127.0.0.1:8000/ilink/webui` → 手机微信扫码 → 绑定个人微信 bot；
 - 之后在微信里直接给 bot 发文本，即查即答。
 - 企业微信、LLM 厂商切换、排错等详见 [[llmwiki-tutorial-02-channel]]。

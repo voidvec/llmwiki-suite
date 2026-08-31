@@ -17,7 +17,32 @@
 Inspired by Karpathy's LLM-wiki idea: instead of ad-hoc RAG slicing at query time,
 this toolkit **continuously compiles** your notes — backfills frontmatter, builds a
 BM25 + wikilink-graph index, lints broken links — and then answers via CLI or a
-WeChat / WeCom / Feishu / Telegram channel.
+WeChat / WeCom / Feishu / Telegram channel. The goal: a personal knowledge base
+that **only grows, never decays** — every note normalized, retrievable, and
+answerable, instead of gathering dust in a folder.
+
+## Why "compile" instead of RAG?
+
+Two philosophies, one sharp difference:
+
+| | Classic RAG | llmwiki (compile) |
+|---|---|---|
+| When does work happen | **At query time** — slice & embed every question, retrieve on the fly | **At import time** — frontmatter, links, indexes are built once |
+| What you keep | Nothing; every query starts from scratch | **Readable, auditable artifacts** you can git-diff and lint |
+| Retrieval quality measured? | Rarely | Built-in `llmwiki eval` (recall@k / MRR) traps regressions |
+| Knowledge compounds? | Re-asking costs the same | New notes make pages smarter, old answers get fresher |
+
+RAG slices your notes at query time; llmwiki **compiles your notes once** and
+turns them into a knowledge base that can be audited (lint), measured (eval),
+served (CLI / IM / Web), and — later — evolves by itself.
+
+> **Your notes stay yours.** Everything runs locally, zero data leaves your
+> machine (no telemetry upload, no cloud). Any suggestion / automatic change can be
+> rejected or rolled back by you — **content ownership always stays with you**.
+
+> **Zero-dependency core.** The compile pipeline (ingest / index / query / lint /
+> eval / health) ships with **zero third-party dependencies** — standard library
+> only. Optional extras add the HTTP bridge (`[serve]`) and channels.
 
 > **Package name vs command name**: on PyPI this is **`llmwiki-suite`** (the bare
 > `llmwiki` name is taken by another project), but the installed command is still
@@ -63,7 +88,8 @@ llmwiki query "..."    # 5. retrieve / Q&A
 ```
 
 Optional: `llmwiki lint` (broken links/vocab), `llmwiki eval` (recall@k / MRR
-quality evaluation), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
+quality evaluation), `llmwiki health` (0-100 health score with HTML/JSON report),
+`llmwiki serve` (HTTP chat bridge, needs `serve` extras).
 
 ## Commands
 
@@ -74,6 +100,7 @@ quality evaluation), `llmwiki serve` (HTTP chat bridge, needs `serve` extras).
 | `llmwiki index` | Build BM25 + wikilink-graph retrieval index (`kb-index.json`) |
 | `llmwiki query "..."` | Retrieve most relevant sections; generate a full answer when `LLM_WIKI_API_KEY` is set |
 | `llmwiki lint` | Checks: broken links, vocab violations, naming conventions |
+| `llmwiki health` | **Health score 0-100** (frontmatter completeness / link robustness / freshness); outputs a self-contained HTML + JSON report — zero deps, offline (beta: "health reference value") |
 | `llmwiki categories-sync` | Derive all categories actually used and write back to `llmwiki.toml` (`--apply` to write) |
 | `llmwiki eval` | Run recall@k / MRR against `<repo>/eval_queries.json`; `--seed` samples and writes a first eval set, `--demo` runs the built-in demo set (`--chart` outputs a self-contained SVG) |
 | `llmwiki serve` | Start FastAPI bridge (`/api/chat` JSON **or SSE streaming**, `/api/recall` JSON + legacy aliases `/chat` `/recall`, `/healthz`, plus `/webui/chat` web Q&A and `/dashboard` workspace) |
@@ -152,6 +179,7 @@ All docs live in `docs/`, organized entry → advanced → reference:
 | `docs/tutorials/llmwiki-tutorial-02-channel.md` | Channels: WeChat / WeCom bridge, serve deployment |
 | `docs/tutorials/llmwiki-tutorial-03-quality-tuning.md` | Retrieval tuning: eval sets, diagnosis, parameter tuning |
 | `docs/llmwiki-eval.md` | **Command reference**: eval CLI options, eval-set schema, report fields, metrics |
+| `docs/llmwiki-health.md` | Health score reference: rules, weights, how to read the report |
 | `docs/llmwiki-evolution-roadmap.md` | **Roadmap**: from passive Q&A to a self-evolving knowledge base (L0→L3) |
 | `docs/llmwiki-architecture.md` | System architecture: layered design, channel abstraction |
 | `docs/obsidian-guide.md` | Optional: use Obsidian as frontend editor |

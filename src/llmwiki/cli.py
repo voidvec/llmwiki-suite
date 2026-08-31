@@ -210,6 +210,28 @@ def cmd_query(args) -> int:
     return 0
 
 
+def cmd_health(args) -> int:
+    """健康分（0-100）：3 规则 MVP（元数据完整性/链接健壮性/新鲜度），
+    输出 JSON + 自包含 HTML（经验版 Beta，健康度参考值，不阻断）。"""
+    from .health import compute, run_health
+    repo = resolve_repo(args.repo)  # Path
+    out_dir = args.out_dir
+    report = run_health(str(repo), out_dir=out_dir,
+                        json_out=not args.no_json, html_out=not args.no_html)
+    print("[health] 健康分 = %d/100（%s）" % (report["score"], report["grade"]))
+    rules = report.get("rules", {})
+    bits = []
+    for key, label in (("meta", "完整性"), ("link", "链接"), ("fresh", "新鲜度")):
+        r = rules.get(key)
+        if r:
+            bits.append("%s %d" % (label, round(r.get("score", 0))))
+    if bits:
+        print("[health] 分项：" + " · ".join(bits))
+    if out_dir:
+        print("[health] 报告已写出：%s/health-report.{json,html}" % out_dir)
+    return 0
+
+
 def cmd_lint(args) -> int:
     from .lint import run_lint
     repo = resolve_repo(args.repo)
@@ -396,6 +418,15 @@ def build_parser() -> argparse.ArgumentParser:
                     help="额外生成自包含 SVG 评估图表")
     sp.set_defaults(func=cmd_eval)
 
+    # health
+    sp = sub.add_parser("health", help="知识库健康分（0-100，JSON+HTML，经验版 Beta）")
+    _add_repo_arg(sp)
+    sp.add_argument("--out-dir", default=None,
+                    help="报告输出目录（默认仅打印分数，不落盘）")
+    sp.add_argument("--no-json", action="store_true", help="不输出 JSON")
+    sp.add_argument("--no-html", action="store_true", help="不输出 HTML")
+    sp.set_defaults(func=cmd_health)
+
     # serve
     sp = sub.add_parser("serve", help="启动 HTTP 桥接服务（需 wechat extras）")
     sp.add_argument("--host", default="127.0.0.1", help="监听地址（默认仅本机）")
@@ -408,6 +439,16 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    # 最简埋点（D2）：全匿名本地记录，任何失败静默不影响主命令
+    try:
+        from .telemetry import record
+        record("cli-run")
+        if getattr(args, "command", None) == "eval":
+            record("eval-run")
+        elif getattr(args, "command", None) == "health":
+            record("health-run")
+    except Exception:
+        pass
     try:
         return args.func(args)
     except SystemExit:

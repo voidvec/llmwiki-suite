@@ -5,7 +5,11 @@
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-31
+
 ### 新增
+- **`/api/*` 正式路由（P2）**：`POST /api/chat`、`/api/recall` 收敛为正式接口，
+  旧 `/chat`、`/recall` 保留为兼容别名（同一处理器，行为一致）。
 - **SSE 流式应答（P3）**：`POST /api/chat`（及 `/chat` 别名）在请求头
   `Accept: text/event-stream` 或 `?stream=1` 时返回 `text/event-stream` 事件流，
   事件序列 `meta`（索引过期告警）→ `candidates`（引用卡）→ `delta*`（回答增量）
@@ -19,6 +23,13 @@
   两端观感一致；收到首个增量前先清空「思考中…」占位，避免占位符拼入正文头部。
 - **回答生成格式引导**：`assistant.py` 的 `PROMPT_TMPL` 增加「多自然段组织、
   段间空行分隔、并列要点用短列表」约束，使流式与非流式输出都倾向结构化分段。
+
+### 变更
+- 无。
+
+## [0.1.5] - 2026-08-27
+
+### 新增
 - 仓库门面化（公众号引流铺垫）：README 顶部横幅 `assets/banner.png`、30 秒快速体验区与终端演示图
   `assets/demo-term.png`、社交预览图 `assets/social-preview.png`、底部「作者与公众号」区（二维码占位）。
 - 新增 `CONTRIBUTING.md`（贡献流程：开发环境/测试/提交规范/PR）与 `SECURITY.md`（漏洞报告与密钥-EV规范）。
@@ -34,17 +45,6 @@
   与 iLink/企业微信共用 `ChannelAdapter` 契约，`serve` 配置环境变量即注册）。
 - 新增 `docs/llmwiki-evolution-roadmap.md`：知识库自进化路线图
   （L0 被动 → L1 记忆 → L2 主动建议 → L3 自主迭代，含实施顺序）。
-
-### 变更
-- 测试套件改为在**已安装包**上运行（`pip install -e .`），去除指向 `src/` 的路径注入——「测试的就是发布的」。
-- README 渠道段改「渠道接入」并列 4 通道；tutorial-02 增补飞书 / Telegram 章节与变量。
-- eval 报告新增 `.svg` 图表输出。
-- extras 更名：`[wechat]` → `[serve]`（该依赖组实际驱动所有通道的 `llmwiki serve`，不再单指微信）；`[wechat]` 保留为兼容别名。
-- 版本 0.1.1 → 0.1.2（发布新 extras 元数据）。
-
-## [0.1.5] - 2026-08-27
-
-### 新增
 - **网页问答页 `GET /webui/chat`**（P0）：自包含 HTML（无外部 CDN、无构建），单栏对话 + 顶部
   `top_k` / categories / tags 筛选 + 回答下方引用卡（path/title/score）+ 索引过期提示；
   与 `POST /chat` 共用同一 `assistant.answer()` 后端。浏览器打开 `localhost:8000/webui/chat` 即用。
@@ -55,6 +55,11 @@
   wecom/feishu/telegram 的 `configured`）。
 - 同步文档：README / README.en / getting-started / architecture / channel-verify / evolution-roadmap
   补网页问答与工作台说明。
+
+### 变更
+- 测试套件改为在**已安装包**上运行（`pip install -e .`），去除指向 `src/` 的路径注入——「测试的就是发布的」。
+- README 渠道段改「渠道接入」并列 4 通道；tutorial-02 增补飞书 / Telegram 章节与变量。
+- extras 更名：`[wechat]` → `[serve]`（该依赖组实际驱动所有通道的 `llmwiki serve`，不再单指微信）；`[wechat]` 保留为兼容别名。
 
 ### 修复
 - **iLink 扫码激活后页面不跳转**：`activate()` 在 `get_qrcode_status` 返回 `confirmed` 时，
@@ -162,6 +167,7 @@
   P4 via_link 补位门槛、top_k 默认收紧 4（节流 ~35% token）。
 - S1 核心引擎可安装化（pip 化迁移）、S2 套件分发（PyPI 发布）。
 
+[0.1.6]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/voidvec/llmwiki-suite/compare/v0.1.2...v0.1.3

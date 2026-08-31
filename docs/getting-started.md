@@ -21,7 +21,7 @@ version: "1.0"
 
 ## 第 0 步：安装
 
-> 当前发布状态：**套件已发布到 PyPI**（`llmwiki-suite 0.1.5`）。
+> 当前发布状态：**套件已发布到 PyPI**（`llmwiki-suite 0.1.6`）。
 > **推荐直接装带微信渠道的版本**——一条命令包含核心 + fastapi/uvicorn，后续接个人微信/企业微信无需再装。
 
 ```bash
@@ -34,7 +34,7 @@ pip install "llmwiki-suite[serve]"
 
 要求 Python ≥ 3.11（内置 `tomllib` 的下限）。安装后命令是 **`llmwiki`**（注意：包名是 `llmwiki-suite`，PyPI 上 `llmwiki` 已被其他项目占用）。
 
-> **锁定已验证版本**（推荐给远端/生产）：`pip install "llmwiki-suite[serve]==0.1.5"`。
+> **锁定已验证版本**（推荐给远端/生产）：`pip install "llmwiki-suite[serve]==0.1.6"`。
 > 升级：`pip install -U "llmwiki-suite[serve]"`。
 
 验证：

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmwiki-suite"
-version = "0.1.5"
+version = "0.1.6"
 description = "LLM-compiled personal wiki toolkit: BM25 + wikilink-graph recall, lint, and chat channels over plain Markdown notes."
 readme = "README.md"
 license = "MIT"

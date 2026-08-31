@@ -25,7 +25,7 @@ pip install "llmwiki-suite[serve]"
 ```
 
 - 建议在 venv 中安装：`python -m venv .venv && source .venv/bin/activate`（Windows: `.venv\Scripts\activate`）。
-- 锁定已验证版本：`pip install "llmwiki-suite[serve]==0.1.0"`。
+- 锁定已验证版本：`pip install "llmwiki-suite[serve]==0.1.6"`。
 - 套件已发布到 PyPI（`llmwiki-suite`），`pip` 直装即可，无需 GitHub 认证。
 
 > 已发布到 PyPI，正常用户 `pip install` 即可，无需 git 认证。仅当从源码安装（`git clone` + `pip install .`）时才走 git；Windows 下避免 `git+file:///D:/...` 本地盘符直装——pip 会把盘符转小写导致 Git 无法解析（已知平台缺陷）。

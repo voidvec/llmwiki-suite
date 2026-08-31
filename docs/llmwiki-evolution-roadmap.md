@@ -12,8 +12,8 @@ tags:
 difficulty: "advanced"
 estimated_time: "20分钟"
 created: "2026-08-26"
-updated: "2026-08-26"
-version: "1.0"
+updated: "2026-08-31"
+version: "1.1"
 ---
 
 # LlmWiki 自进化路线图：从一问一答到主动思考与建议
@@ -51,7 +51,7 @@ version: "1.0"
 | `llmwiki index` | ✔ BM25 + wikilink 图 | 召回基础 |
 | `llmwiki eval` | ✔ recall@K / MRR + `--chart` | **给召回定标尺**，进化才有「是否变好」的判据 |
 | pre-commit / CI | ✔ 质量门禁 | 每次改动不破基线 |
-| `llmwiki serve` | ✔ 微信/企业微信/飞书/Telegram + 网页问答（`/webui/chat`）/工作台（`/dashboard`） | 已有 4 通道 + 浏览器侧 UI，进化后回写有渠道有界面 |
+| `llmwiki serve` | ✔ 微信/企业微信/飞书/Telegram + 网页问答（`/webui/chat`）/工作台（`/dashboard`）；`/api/*` 路由收敛 + **SSE 流式打字机**（可中断、可降级） | 已有 4 通道 + 浏览器侧 UI + 机器接口，进化后回写有渠道有界面 |
 | P3 索引新鲜度 | ✔ 指纹比对告警 | 已具备「感知内容变了」的最小能力 |
 
 **验证**：`llmwiki eval --chart` 能画出 recall@K；`serve /healthz` 通道全部列出。
@@ -203,6 +203,7 @@ eval 回归（必须不降低 recall/MRR 才生效）→ 形成 kb-evolution/章
 
 9. **评估图表**（已完成本次合并本）→ 让一切进化可衡量；
 7. **飞书 / Telegram 通道**（本次已加）→ 让知识库有了「被问 + 可回」的真实触点；
+8. **路由收敛 + SSE 流式**（P2/P3 本次已加）→ `/api/*` 机器接口收敛；`/api/chat` 支持 `text/event-stream` 打字机流式（可中断），网页问答 `/webui/chat` 直接可用；
 1. **observe + kb-memory**（L1 第一阶段）→ 补全「被问过什么、缺什么」的记忆；
 2. nightly 重放 + suggest（L1 完成）→ 有主动建议输出；
 3. 过期感知 + 主动 FAQ（L2）→ 知识库主动维活；

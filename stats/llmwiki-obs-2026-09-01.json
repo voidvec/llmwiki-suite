@@ -1,12 +1,12 @@
 {
   "date": "2026-09-01",
-  "fetched_at": "2026-09-01T17:47:09+0800",
+  "fetched_at": "2026-09-01T18:38:09+0800",
   "pypi": {
     "package": "llmwiki-suite",
-    "last_day": 94,
-    "last_week": 569,
-    "last_month": 569,
-    "error": null
+    "last_day": null,
+    "last_week": null,
+    "last_month": null,
+    "error": "recent: HTTP Error 429: Too Many Requests"
   },
   "github": {
     "stars": 0,

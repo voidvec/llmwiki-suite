@@ -77,28 +77,39 @@ def append_csv(snapshot: dict, csv_path: str) -> None:
               "stars", "forks", "open_issues", "open_prs", "version"]
     pypi = snapshot.get("pypi") or {}
     gh = snapshot.get("github") or {}
-    row = [
-        snapshot.get("date", ""),
-        pypi.get("last_month") if pypi.get("last_month") is not None else "",
-        pypi.get("last_day") if pypi.get("last_day") is not None else "",
-        gh.get("stars") if gh.get("stars") is not None else "",
-        gh.get("forks") if gh.get("forks") is not None else "",
-        gh.get("open_issues") if gh.get("open_issues") is not None else "",
-        gh.get("open_prs") if gh.get("open_prs") is not None else "",
-        gh.get("latest_release") or "",
-    ]
-    new_file = not os.path.isfile(csv_path)
-    # 读既有行，同日则替换（保留表头 + 非同日历史行）
+    date = snapshot.get("date", "")
+    # 读既有行：取旧行（表头 + 历史行）。同日旧行的非空字段用作本轮兜底（防上游失败冲掉好数据）
     rows = []
-    if not new_file:
+    if os.path.isfile(csv_path):
         with open(csv_path, "r", newline="", encoding="utf-8") as f:
             rows = list(csv.reader(f))
-    date = snapshot.get("date", "")
+    old_row = {}
     if rows and rows[0] and rows[0][0] == "date":
         header_row = rows.pop(0)  # 取出表头
+        for r in rows:
+            if r and r[0] == date:
+                old_row = dict(zip(header_row, r))
+                break
     else:
         header_row = header
     rows = [r for r in rows if not (r and r[0] == date)]  # 去掉同日旧行
+
+    def _pick(new_val, key):
+        """新值非空用新值，否则保留旧值（防上游失败把好数据冲空）。"""
+        if new_val is not None and str(new_val) != "":
+            return new_val
+        return old_row.get(key, "")
+
+    row = [
+        date,
+        _pick(pypi.get("last_month"), "pypi_total_downloads"),
+        _pick(pypi.get("last_day"), "pypi_recent_downloads"),
+        _pick(gh.get("stars"), "stars"),
+        _pick(gh.get("forks"), "forks"),
+        _pick(gh.get("open_issues"), "open_issues"),
+        _pick(gh.get("open_prs"), "open_prs"),
+        _pick(gh.get("latest_release"), "version"),
+    ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(header_row)

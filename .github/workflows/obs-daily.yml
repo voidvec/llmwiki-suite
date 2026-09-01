@@ -1,0 +1,40 @@
+name: obs-daily
+
+# D4 曝光监控 · 每日自动抓取一次（GitHub + PyPI），并把当日快照提交回仓库（stats/ 可追溯）。
+# 节奏：每天 01:00 UTC（= 北京 09:00）。手动触发入口保留（workflow_dispatch）。
+# 说明：抓取脚本零第三方依赖（标准库 urllib/json/csv），无密钥需求；
+#       GitHub 匿名 API 限流 60 次/时，单次快照仅 4 个请求，每日 1 次绰绰有余。
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 每天 01:00 UTC
+  workflow_dispatch: {}   # 手动「Run workflow」
+
+permissions:
+  contents: write          # 允许提交 stats/ 回仓库
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: 运行每日曝光快照
+        run: python scripts/obs_daily_snapshot.py --out-dir stats
+
+      - name: 提交当日快照（若有变更）
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add stats/
+          if ! git diff --cached --quiet; then
+            git commit -m "obs(daily): 曝光快照 $(date +%F)"
+            git push
+          else
+            echo "无变更（同日幂等，跳过提交）"
+          fi

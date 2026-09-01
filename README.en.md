@@ -48,6 +48,9 @@ served (CLI / IM / Web), and — later — evolves by itself.
 > `llmwiki` name is taken by another project), but the installed command is still
 > **`llmwiki`** — you install `llmwiki-suite`, and run `llmwiki`.
 
+> **Status**: Pre-release (v0.1.x). Public "health score" is a **beta reference
+> value** ("经验版 Beta"). See `docs/scope-freeze.md` for the 9-week roadmap scope.
+
 ## Install
 
 > Published on PyPI. **Recommended: install the `serve` edition** (core + the
@@ -179,7 +182,9 @@ All docs live in `docs/`, organized entry → advanced → reference:
 | `docs/tutorials/llmwiki-tutorial-02-channel.md` | Channels: WeChat / WeCom bridge, serve deployment |
 | `docs/tutorials/llmwiki-tutorial-03-quality-tuning.md` | Retrieval tuning: eval sets, diagnosis, parameter tuning |
 | `docs/llmwiki-eval.md` | **Command reference**: eval CLI options, eval-set schema, report fields, metrics |
+| `docs/llmwiki-eval-report-v1.md` | **Public eval report v1**: recall baseline (recall@4=1.0 / MRR=1.0) + scope limits |
 | `docs/llmwiki-health.md` | Health score reference: rules, weights, how to read the report |
+| `docs/llmwiki-obs.md` | **Exposure monitoring**: daily GitHub + PyPI snapshot (D4) |
 | `docs/llmwiki-evolution-roadmap.md` | **Roadmap**: from passive Q&A to a self-evolving knowledge base (L0→L3) |
 | `docs/llmwiki-architecture.md` | System architecture: layered design, channel abstraction |
 | `docs/obsidian-guide.md` | Optional: use Obsidian as frontend editor |

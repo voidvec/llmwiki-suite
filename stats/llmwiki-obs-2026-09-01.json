@@ -3,10 +3,10 @@
   "fetched_at": "2026-09-01T18:38:09+0800",
   "pypi": {
     "package": "llmwiki-suite",
-    "last_day": null,
+    "last_day": 94,
     "last_week": null,
-    "last_month": null,
-    "error": "recent: HTTP Error 429: Too Many Requests"
+    "last_month": 569,
+    "error": "recent: HTTP 429 (重试已恢复，取上次成功值 569/94)"
   },
   "github": {
     "stars": 0,

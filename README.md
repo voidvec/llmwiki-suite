@@ -162,6 +162,9 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/tutorials/llmwiki-tutorial-02-channel.md` | 渠道接入：微信 / 企业微信桥接、serve 部署 |
 | `docs/tutorials/llmwiki-tutorial-03-quality-tuning.md` | 检索质量调优：评估集、诊断、调参 |
 | `docs/llmwiki-eval.md` | **命令参考**：eval 全部选项、评估集 schema、报告字段、指标解读 |
+| `docs/llmwiki-eval-report-v1.md` | **评测报告 v1**：公开召回基线（recall@4=1.0 / MRR=1.0）+ 局限声明 |
+| `docs/llmwiki-health.md` | **健康分**：0-100 知识库健康度参考（D1） |
+| `docs/llmwiki-obs.md` | **曝光监控**：GitHub + PyPI 每日抓取（D4） |
 | `docs/llmwiki-evolution-roadmap.md` | **路线图**：从被动问答到知识库自进化（L0→L3） |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
 

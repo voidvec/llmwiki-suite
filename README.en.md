@@ -206,8 +206,4 @@ The author writes (in Chinese) about LLM / RAG / knowledge-base engineering,
 the evolution of this toolkit (from L0 passive Q&A to L3 self-evolution), and
 open-source journeys from 0 to 1.
 
-<p align="center">
-  <img src="assets/qrcode-wechat-placeholder.png" alt="WeChat official account QR (replace me)" width="160"/>
-  <br/>
-  Follow via WeChat: **公众号名待填** (QR placeholder, replace with real one)
-</p>
+> Follow via WeChat: **王小c**（QR code will be added later）

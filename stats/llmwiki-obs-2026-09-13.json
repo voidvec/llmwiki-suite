@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-13",
+  "fetched_at": "2026-09-13T05:42:26+0000",
+  "pypi": {
+    "package": "llmwiki-suite",
+    "last_day": 3,
+    "last_week": 24,
+    "last_month": 658,
+    "error": null
+  },
+  "github": {
+    "stars": 0,
+    "forks": 0,
+    "open_issues": 0,
+    "open_prs": 0,
+    "latest_release": "v0.1.6",
+    "latest_release_at": "2026-08-31T06:54:50Z",
+    "error": null
+  }
+}

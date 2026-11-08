@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-08",
+  "fetched_at": "2026-11-08T06:57:29+0000",
+  "pypi": {
+    "package": "llmwiki-suite",
+    "last_day": 23,
+    "last_week": 42,
+    "last_month": 94,
+    "error": null
+  },
+  "github": {
+    "stars": null,
+    "forks": null,
+    "open_issues": 0,
+    "open_prs": null,
+    "latest_release": null,
+    "latest_release_at": null,
+    "error": "repo: HTTP 403 | pulls: HTTP 403"
+  }
+}

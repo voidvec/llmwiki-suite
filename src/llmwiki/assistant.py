@@ -13,6 +13,7 @@ LLM 未配置时降级返回检索片段预览，保证离线可联调。
 """
 import json
 import os
+import re
 
 from . import _env
 import urllib.request
@@ -145,13 +146,22 @@ class KbAssistant:
             yield ("（LLM 调用失败: %s。以下为检索片段预览）\n" % e) + prompt[:600]
 
     # ---- 上下文拼装：章节级取数，省 token ----
+    _FM_RE = re.compile(r"\A---\n.*?\n---\n", re.S)
+    _CITE_RE = re.compile(r"<cite>.*?</cite>\s*", re.S)
+
+    def _strip_scaffold(self, text: str) -> str:
+        """剥掉 frontmatter 与 <cite> 引用清单——它们占满开头预算，对回答无信息量"""
+        text = self._FM_RE.sub("", text)
+        return self._CITE_RE.sub("", text).lstrip("\n")
+
     def build_context(self, hits, max_chapters=4):
         parts = []
         for h in hits[:max_chapters]:
+            chunk = ""
             if h.matched_headings:
                 chunk = self.retriever.fetch_chapter(h.path, h.matched_headings[0])
-            else:
-                chunk = self.retriever.read_doc(h.path)
+            if not chunk:
+                chunk = self._strip_scaffold(self.retriever.read_doc(h.path))
             parts.append("【%s】\n%s" % (h.title, chunk[:1200]))
         return "\n\n".join(parts)
 

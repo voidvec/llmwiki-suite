@@ -443,7 +443,13 @@ class KbRetriever:
 
     # ---- 单篇打分（BM25 × 字段 boost × 覆盖度系数） --------------------------
     def _score_doc(self, doc: dict, terms: list[str]) -> tuple[float, list[str]]:
-        matched_headings: set[str] = set()
+        heading_hits: dict[str, float] = {}
+        headings = doc.get("headings", [])
+        # 词的标题稀有度：出现在越少标题里，越能定位到具体章节。
+        # 不加权的话，`契约/测试` 这类全篇标题都含的词会让任意小节胜出，
+        # 而 `CI/集成` 这种只在附录出现的词反而排不到前面。
+        head_low = [h.lower() for h in headings]
+        term_df = {t: max(1, sum(1 for hl in head_low if t in hl)) for t in terms}
         score = 0.0
         p = doc["path"]
         tf_by_field = self._field_tf[p]   # R3：查表（init 已缓存，不再分词）
@@ -456,9 +462,10 @@ class KbRetriever:
                 score += s
                 # 记录命中的章节（仅 headings 字段用于章节级检索）
                 if f == "headings" and s > 0:
-                    for h in doc.get("headings", []):
-                        if term in h.lower():
-                            matched_headings.add(h)
+                    w = 1.0 / term_df[term]
+                    for h, hl in zip(headings, head_low):
+                        if term in hl:
+                            heading_hits[h] = heading_hits.get(h, 0.0) + w
         # R2 覆盖度平滑 ramp（替代旧硬阶跃 1.0 if cov>=0.34 else 0.7）：
         # cov=0 → 0.7（保留低覆盖压制，不砍到 0.5），cov≥0.34 → 1.0（满分），
         # 区间内线性过渡——边界处不再出现 ~43% 的分数跳变与排名翻转。
@@ -467,7 +474,12 @@ class KbRetriever:
         coverage = matched / len(terms) if terms else 0.0
         factor = COVERAGE_FLOOR + (1.0 - COVERAGE_FLOOR) * min(
             coverage / COVERAGE_FULL, 1.0)
-        return score * factor, list(matched_headings)
+        # 命中章节按「稀有度加权分降序、标题长度降序」排序：调用方取 [0] 作上下文。
+        # 早先按文档 heading 顺序取首个，H1 标题（必含查询词）永远排第一，
+        # 上下文退化成文档开头（cite 清单 + 目录），正文小节取不到。
+        matched_headings = sorted(heading_hits,
+                                  key=lambda h: (-heading_hits[h], -len(h)))
+        return score * factor, matched_headings
 
     # ---- 对外召回接口 -----------------------------------------------------
     def recall(self, query: str, top_k: int = 4,

@@ -77,8 +77,12 @@ def collect_staged_md():
     return [l.strip() for l in out.splitlines() if l.strip().endswith(".md")]
 
 
-def lint_file(rel, index, vocab, repo):
-    """返回该文件的 issue 列表：{level, rule, detail}。"""
+def lint_file(rel, index, vocab, repo, strict=False):
+    """返回该文件的 issue 列表：{level, rule, detail}。
+
+    strict=True（`--strict-links`）时链接按渲染端口径判死：归一只做大小写，
+    目录不再算合法目标；断链详情里附「宽松口径可解析为 …」便于定位旧名。
+    """
     doc = index["files"].get(rel)
     if not doc:
         return []
@@ -116,13 +120,18 @@ def lint_file(rel, index, vocab, repo):
     clean = strip_code(body)
     for m in WIKILINK_RE.finditer(clean):
         target = m.group(1)
-        status, resolved = resolve_wikilink(target, rel, index)
+        status, resolved = resolve_wikilink(target, rel, index, strict=strict)
         if status == "missing":
-            issues.append({"level": "error", "rule": "link.wikilink.dead",
-                           "detail": "断链 [[%s]]（归一后仍无匹配目标）" % target})
+            detail = "断链 [[%s]]（归一后仍无匹配目标）" % target
+            if strict:
+                loose_status, loose_rel = resolve_wikilink(target, rel, index)
+                if loose_status == "ok" and loose_rel:
+                    detail = ("断链 [[%s]]（严格口径无精确目标；宽松口径可解析为 %s——"
+                              "多为改名后未跟随的旧链接）" % (target, loose_rel))
+            issues.append({"level": "error", "rule": "link.wikilink.dead", "detail": detail})
     for m in MD_LINK_RE.finditer(clean):
         target = m.group("target")
-        status, resolved, anchor = resolve_md_link(target, rel, index, repo)
+        status, resolved, anchor = resolve_md_link(target, rel, index, repo, strict=strict)
         if status == "external":
             continue  # 外链交给 lychee
         if status == "anchor_same":
@@ -140,7 +149,8 @@ def lint_file(rel, index, vocab, repo):
     return issues
 
 
-def run_lint(cfg: Config, files=None, staged=False, report=None, sync_vocab=False):
+def run_lint(cfg: Config, files=None, staged=False, report=None, sync_vocab=False,
+             strict_links=False):
     """巡检主入口。返回退出码（0 通过 / 1 有 error）。"""
     repo = str(cfg.repo)
     index = build_link_index(repo, cfg.exclude_dirs)
@@ -172,7 +182,7 @@ def run_lint(cfg: Config, files=None, staged=False, report=None, sync_vocab=Fals
     all_issues = {}
     ignored = 0
     for rel in targets:
-        issues = lint_file(rel, index, vocab, repo)
+        issues = lint_file(rel, index, vocab, repo, strict=strict_links)
         kept = []
         for i in issues:
             if is_ignored(rel, i, ignore_rules):
@@ -189,6 +199,7 @@ def run_lint(cfg: Config, files=None, staged=False, report=None, sync_vocab=Fals
     report_data = {
         "schema_version": "1.0",
         "generated_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "strict_links": bool(strict_links),
         "checked_files": len(targets),
         "errors": errors,
         "warnings": warns,
@@ -198,8 +209,9 @@ def run_lint(cfg: Config, files=None, staged=False, report=None, sync_vocab=Fals
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report_data, f, ensure_ascii=False, indent=2)
 
-    print("[lint] 检查 %d 个文件 | errors=%d warnings=%d ignored=%d"
-          % (len(targets), errors, warns, ignored))
+    print("[lint] 检查 %d 个文件 | errors=%d warnings=%d ignored=%d%s"
+          % (len(targets), errors, warns, ignored,
+             " | 严格链接口径" if strict_links else ""))
     if all_issues:
         for rel, iss in sorted(all_issues.items()):
             for i in iss:
@@ -215,11 +227,14 @@ def main(argv=None):
     ap.add_argument("--staged", action="store_true", help="仅检查 git 暂存区 .md")
     ap.add_argument("files", nargs="*", help="指定文件（相对于库根）")
     ap.add_argument("--report", default=None, help="JSON 报告输出路径")
+    ap.add_argument("--strict-links", action="store_true", dest="strict_links",
+                    help="链接按渲染端口径判死：归一只做大小写，目录不算目标（暴露改名遗留的旧链接）")
     args = ap.parse_args(argv)
 
     repo = resolve_repo(args.repo)
     cfg = load_config(repo)
-    return run_lint(cfg, files=args.files, staged=args.staged, report=args.report)
+    return run_lint(cfg, files=args.files, staged=args.staged, report=args.report,
+                    strict_links=args.strict_links)
 
 
 if __name__ == "__main__":

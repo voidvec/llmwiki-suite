@@ -237,7 +237,7 @@ def cmd_lint(args) -> int:
     repo = resolve_repo(args.repo)
     cfg = load_config(repo)
     return run_lint(cfg, files=args.files, staged=args.staged, report=args.report,
-                    sync_vocab=args.sync_vocab)
+                    sync_vocab=args.sync_vocab, strict_links=args.strict_links)
 
 
 def cmd_categories(args) -> int:
@@ -386,6 +386,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--report", default=None)
     sp.add_argument("--sync-vocab", action="store_true",
                     help="自动把索引派生词表并入 toml 词表（自愈 categories 漏收）")
+    sp.add_argument("--strict-links", action="store_true", dest="strict_links",
+                    help="链接按渲染端口径判死：归一只做大小写，目录不算目标")
     sp.set_defaults(func=cmd_lint)
 
     # categories-sync

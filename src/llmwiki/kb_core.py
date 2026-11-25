@@ -133,6 +133,18 @@ def normalize_token(s):
     return s.strip("-")
 
 
+def normalize_strict(s):
+    """严格归一（`--strict-links` 用）：只做「大小写 + 分隔符方向」，与 Obsidian 引擎一致。
+
+    与 normalize_token 的差别就是**不猜**：不把 `：`/`:` 当 `-`、不把 `_` 当 `-`、
+    不折叠空白、不合并多余连字符。渲染端看到什么就比对什么。
+    用途：改名后未跟随的旧链接（如 `01-xxx：副标题` 对 `01-xxx-副标题.md`）在宽松
+    口径下被判存活，在严格口径下暴露。
+    """
+    s = (s or "").strip().lower().replace("\\", "/")
+    return s
+
+
 def _rel_no_ext(rel):
     return rel[:-3] if rel.endswith(".md") else rel
 
@@ -210,6 +222,7 @@ def build_link_index(repo, exclude_dirs):
     vendored 文件（无 KB frontmatter）也登记文件存在以便链接解析，但 FM 校验会跳过它们。
     """
     by_rel, by_base, by_dir, files = {}, {}, set(), {}
+    by_rel_s, by_base_s = {}, {}
     for dp, dns, fns in os.walk(repo):
         # 目录索引：所有真实存在的目录（排除隐藏/排除目录）皆为合法 `[[folder]]` 目标
         dp_rel = os.path.relpath(dp, repo).replace("\\", "/")
@@ -232,20 +245,28 @@ def build_link_index(repo, exclude_dirs):
             by_rel[normalize_token(_rel_no_ext(rel))] = rel
             base = os.path.splitext(os.path.basename(rel))[0]
             by_base.setdefault(normalize_token(base), []).append(rel)
-    return {"by_rel": by_rel, "by_base": by_base, "by_dir": by_dir, "files": files}
+            by_rel_s[normalize_strict(_rel_no_ext(rel))] = rel
+            by_base_s.setdefault(normalize_strict(base), []).append(rel)
+    return {"by_rel": by_rel, "by_base": by_base, "by_dir": by_dir, "files": files,
+            "by_rel_s": by_rel_s, "by_base_s": by_base_s}
 
 
 # --------------------------------------------------------------------------
 # 链接解析（铁律 4：路径式 / 裸名分别解析）
 # --------------------------------------------------------------------------
-def resolve_wikilink(target, source_rel, index):
+def resolve_wikilink(target, source_rel, index, strict=False):
     """Obsidian 语义解析 `[[target]]`。target 可能含 `|alias` 或 `#heading`。
     返回 (status, resolved_rel_or_None)。status: 'ok' | 'missing'。
     'ok' 表示归一后命中（Obsidian 大小写/分隔符不敏感，命中即存活）。
+
+    strict=True 走 `--strict-links` 口径：归一只做大小写，目录不再算合法目标——
+    用来暴露「渲染端点不开、宽松口径却放行」的旧链接（改名后未跟随）。
     """
     link = target.split("|", 1)[0].split("#", 1)[0].strip()
     if not link:
         return ("missing", None)
+    if strict:
+        return _resolve_wikilink_strict(link, source_rel, index)
     nt = normalize_token(link)
     # 路径式：含 / 或显式相对/上级
     if "/" in nt or link in (".", ".."):
@@ -280,7 +301,32 @@ def resolve_wikilink(target, source_rel, index):
     return ("missing", None)
 
 
-def resolve_md_link(target, source_rel, index, repo):
+def _resolve_wikilink_strict(link, source_rel, index):
+    """严格口径的 wikilink 解析：只认磁盘上真实存在的 `.md`，归一只做大小写。"""
+    key = normalize_strict(link)
+    if "/" in key or link in (".", ".."):
+        if key in index["by_rel_s"]:
+            return ("ok", index["by_rel_s"][key])
+        if source_rel:
+            base_dir = os.path.dirname(source_rel)
+            joined = normalize_strict(os.path.normpath(os.path.join(base_dir, link)))
+            if joined in index["by_rel_s"]:
+                return ("ok", index["by_rel_s"][joined])
+        return ("missing", None)
+    cands = index["by_base_s"].get(key)
+    if not cands:
+        return ("missing", None)
+    if len(cands) == 1:
+        return ("ok", cands[0])
+    if source_rel:
+        sd = os.path.dirname(source_rel)
+        same = [c for c in cands if os.path.dirname(c) == sd]
+        if same:
+            return ("ok", same[0])
+    return ("ok", cands[0])
+
+
+def resolve_md_link(target, source_rel, index, repo, strict=False):
     """解析标准 markdown 链接 `[text](target)`。
     返回 (status, resolved_rel_or_None, anchor_or_None)。
     status: 'external'（http/mailto，交给 lychee）| 'anchor_same'（仅 #锚点，同文件）
@@ -299,14 +345,15 @@ def resolve_md_link(target, source_rel, index, repo):
         joined = os.path.normpath(path_part)
     joined = joined.replace("\\", "/")
     if joined.endswith(".md"):
-        key = normalize_token(_rel_no_ext(joined))
-        if key in index["by_rel"]:
-            return ("ok", index["by_rel"][key], anchor or None)
+        key = (normalize_strict if strict else normalize_token)(_rel_no_ext(joined))
+        table = index["by_rel_s"] if strict else index["by_rel"]
+        if key in table:
+            return ("ok", table[key], anchor or None)
         return ("missing", None, anchor or None)
     # 非 .md 目标（图片 / LICENSE / 二进制）：按磁盘存在性判定，而非 .md 索引
     if os.path.exists(os.path.join(repo, joined)):
         return ("ok", joined, anchor or None)
-    if joined in index["by_dir"]:
+    if not strict and joined in index["by_dir"]:
         return ("ok", joined, anchor or None)
     return ("missing", None, anchor or None)
 

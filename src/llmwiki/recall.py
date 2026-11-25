@@ -237,6 +237,11 @@ class KbRetriever:
             self.index = json.load(f)
         self.root = os.path.dirname(os.path.abspath(index_path))
         self.docs = self.index["documents"]
+        # 导航页（frontmatter `kind: nav-index`）只为人工浏览服务，不参与 BM25 打分：
+        # 它按设计会把一整片域内的标题词装进同一篇，凭关键词密度抢正本文档的
+        # top-1（历史事故：Playwright「指引页」把正本挤出 top-4，recall 98.2%→96.5%）。
+        # 仍保留在出链图里——导航页指向内容的边对召回是有益的。
+        self._scored_docs = [d for d in self.docs if d.get("kind") != "nav-index"]
         # P3：过期检测的文件系统扫描口径（与 gen_index.collect 的排除规则一致）；
         # None → 套件默认排除集（cfg.exclude_dirs = 默认集 + toml 追加，正常链路
         # 都显式传入；兜底用默认集避免扫到 .git/scripts 等目录产生假 added）
@@ -370,7 +375,7 @@ class KbRetriever:
         """
         df: dict[str, int] = defaultdict(int)
         field_len: dict[str, int] = defaultdict(int)
-        for d in self.docs:
+        for d in self._scored_docs:
             seen: set[str] = set()
             for f in FIELD_BOOST:
                 tf = self._field_tf[d["path"]][f]
@@ -379,7 +384,7 @@ class KbRetriever:
                     if t not in seen:
                         df[t] += 1
                         seen.add(t)
-        n = len(self.docs)
+        n = len(self._scored_docs)
         self._df = df
         self._N = n
         # 每字段平均长度；空字段兜底 1.0 避免 dl/avgdl 除零
@@ -439,7 +444,8 @@ class KbRetriever:
             for t in tags:
                 tag_paths |= set(self.tag_index.get(t, []))
             paths &= tag_paths
-        return [self._by_path[p] for p in paths if p in self._by_path]
+        return [self._by_path[p] for p in paths
+                if p in self._by_path and self._by_path[p].get("kind") != "nav-index"]
 
     # ---- 单篇打分（BM25 × 字段 boost × 覆盖度系数） --------------------------
     def _score_doc(self, doc: dict, terms: list[str]) -> tuple[float, list[str]]:

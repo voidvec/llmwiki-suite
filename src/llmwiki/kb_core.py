@@ -27,8 +27,13 @@ import re
 # frontmatter 块：必须含开头的 --- 与闭合的 ---（行级编辑铁律：绝不删除 ---）。
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?", re.S)
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
-CODE_FENCE_RE = re.compile(r"`{3,}.*?`{3,}", re.S)
-INLINE_CODE_RE = re.compile(r"`[^`]*`")
+# 代码围栏：按 CommonMark 要求锚定行首（允许 ≤3 空格缩进与引用块 `>` 前缀），
+# 且闭围栏长度**不短于**开围栏（`\1` + `` `* ``）。旧版裸正则 `{3,}.*?`{3,}` 不锚行首，
+# 正文里作为术语出现的 4 反引号会与后文任意 ``` 配成一对，把中间整段正文
+# （含 [[wikilink]] 示例表格）吞成代码块，造成 lint 断链误报。
+CODE_FENCE_RE = re.compile(
+    r"^(?:[ \t]*>)*[ \t]*(`{3,})[^\n]*\n.*?^(?:[ \t]*>)*[ \t]*\1`*[ \t]*$", re.S | re.M)
+INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)([^\n]+?)(?<!`)\1(?!`)")
 
 # 链接提取（在剥掉代码块/内联代码之后进行，否则 C++ `[[T]]`、bash `[[ =~ ]]` 误报）。
 WIKILINK_RE = re.compile(r"\[\[([^\]]+?)\]\]")

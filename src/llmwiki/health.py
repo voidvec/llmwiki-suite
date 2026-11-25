@@ -117,13 +117,17 @@ def compute(repo, cfg: Config | None = None, exclude_dirs=None) -> dict:
         fm, body, raw_fm = split_fm(text)
 
         # --- 1. 文档完整性（frontmatter 必填 + 正文非空）---
-        n_fm += 1
-        missing = [f for f in REQUIRED_FM
-                   if not (fm and fm.get(f) is not None and str(fm.get(f)).strip())]
-        if missing:
-            fm_issues.append((rel, "missing-fm:" + ",".join(missing)))
-        if not strip_code(body or "").strip():
-            fm_issues.append((rel, "empty-body"))
+        # vendored 仓库元数据（CHANGELOG/CLAUDE/CONTRIBUTING/LICENSE/README 等）本就
+        # 没有知识库 frontmatter，若计入分母会永久压在 99 分且无法通过补字段消除
+        # （补了反而污染检索）。与上面注释声明的「不参与统计」保持一致地跳过。
+        if not is_vendored(rel):
+            n_fm += 1
+            missing = [f for f in REQUIRED_FM
+                       if not (fm and fm.get(f) is not None and str(fm.get(f)).strip())]
+            if missing:
+                fm_issues.append((rel, "missing-fm:" + ",".join(missing)))
+            if not strip_code(body or "").strip():
+                fm_issues.append((rel, "empty-body"))
 
         # --- 2. 链接健壮性 ---
         safe_body = strip_code(body or "")

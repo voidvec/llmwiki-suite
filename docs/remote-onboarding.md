@@ -5,7 +5,7 @@ categories: ['工具指南']
 tags: [llmwiki, onboarding, install, remote, setup, ci]
 difficulty: "beginner"
 created: "2026-08-25"
-updated: "2026-08-31"
+updated: "2026-11-26"
 ---
 
 # 另一台电脑 / 别人的知识库：接入 llmwiki-suite

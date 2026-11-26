@@ -106,7 +106,7 @@ llmwiki init      # 生成 llmwiki.toml + 拷入 .gitignore/pre-commit/CI 模板
 |--------|------|------|
 | `[repo] index_file` | 索引产物文件名 | `kb-index.json` |
 | `[ingest] extra_exclude` | 追加排除目录 | `["私人文档/", ".obsidian"]` |
-| `[categories] allowed` | 受控词表（整体替换默认） | `["知识库规范", "软件架构", "读书笔记"]` |
+| `[categories] allowed` | 受控词表（在套件默认词表之上增量追加；`replace_default = true` 才整体替换） | `["知识库规范", "软件架构", "读书笔记"]` |
 | `[llm] model / base_url` | 非密钥 LLM 参数 | `gpt-4o-mini` |
 | `[serve] host / port` | 桥接服务监听 | `127.0.0.1 / 8000` |
 
@@ -141,7 +141,7 @@ version: "1.0"
 `categories` 必须落在知识库**已启用的分类集合**内（初始化时由 `llmwiki init` 写入 `llmwiki.toml` 的 `categories.allowed`）。lint 据此检查，目的是防止拼写错误或随意新建游离分类造成碎片化。
 
 - **查看当前词表**：`llmwiki lint` 的 `--report` 细节会列出词表；或直接看 `llmwiki.toml`。
-- **如何定制（有意引入新分类）**：编辑 `llmwiki.toml` 的 `categories.allowed`（整体替换语义），然后保持全库一致。别制造一次性拼写变体（如 `Qt` / `QT` / `qt` 并存）。
+- **如何定制（有意引入新分类）**：编辑 `llmwiki.toml` 的 `categories.allowed`（增量追加语义，在套件默认词表之上追加；如需整体替换设 `[categories].replace_default = true`），然后保持全库一致。别制造一次性拼写变体（如 `Qt` / `QT` / `qt` 并存）。
 
 > `llmwiki lint` 对「空 / 极少词表」会给出 warning，防止误删默认。
 
@@ -256,7 +256,7 @@ llmwiki index --repo ~/my-notes
 
 ```powershell
 # PowerShell 等价
-llmmwiki index
+llmwiki index
 ```
 
 产物（写在库根）：
@@ -322,7 +322,7 @@ print('来源:', [c['path'] for c in cands])
 
 - 配置了 `LLM_WIKI_API_KEY` → 返回 LLM 基于检索片段生成的回答（简洁、引用来源标题）。
 - 未配置 → 返回「（未配置 LLM_WIKI_API_KEY，以下为检索片段预览）」+ 片段开头，**离线可联调**。
-- 知识库无相关内容 → 返回「知识库中未找到相关信息。离」
+- 知识库无相关内容 → 返回「知识库中未找到相关信息。」
 
 ### 4.3 章节级取数（省 token）
 

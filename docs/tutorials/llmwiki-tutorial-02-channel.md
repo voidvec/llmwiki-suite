@@ -1,6 +1,6 @@
 ---
 title: "LLMWiki 渠道接入：把知识库接到微信等聊天渠道"
-description: "把本地 LLMWiki 知识库接入微信做问答：装 wechat extras → 起桥接服务 → 个人微信(iLink 官方 Bot API)扫码授权 → 企业微信(可选) → 微信端直接查知识库。覆盖 PowerShell/bash/Git Bash 三版本与排错。"
+description: "把本地 LLMWiki 知识库接入微信做问答：装 serve extras → 起桥接服务 → 个人微信(iLink 官方 Bot API)扫码授权 → 企业微信(可选) → 微信端直接查知识库。覆盖 PowerShell/bash/Git Bash 三版本与排错。"
 categories: ['知识库规范', '软件架构']
 tags:
   - llmwiki
@@ -49,7 +49,7 @@ Telegram ────────Webhook(setWebhook)─► TelegramAdapter┘
 | 项 | 说明 | 验证 |
 |----|------|------|
 | 已装 llmwiki-suite | 见姊妹篇 §1.2 | `llmwiki --help` |
-| wechat extras | 桥接服务依赖 fastapi + uvicorn | `llmwiki serve --help` |
+| serve extras | 桥接服务依赖 fastapi + uvicorn | `llmwiki serve --help` |
 | 知识库索引 | 已生成 `kb-index.json` | `ls kb-index.json` |
 | LLM Key（推荐） | 不设也能跑，答案降级为片段预览 | `echo $LLM_WIKI_API_KEY` |
 | iLink 平台权限 | **个人微信前提**：需有腾讯 iLink Bot API 访问权限 | 取码能返回二维码即代表有权 |
@@ -271,7 +271,7 @@ export LLM_WIKI_WECOM_AGENTID="1000002"
 
 ## 6.5 飞书（Lark）接入（可选）
 
-飞书是 **Webhook 事件订阅**模型：飞到回调 `POST /feishu/callback`，无强制加密，仅需 app 凭据换 token。
+飞书是 **Webhook 事件订阅**模型：飞书把事件 POST 到回调 `POST /feishu/callback`，无强制加密，仅需 app 凭据换 token。
 
 ```bash
 export LLM_WIKI_FEISHU_APP_ID="cli_xxx"

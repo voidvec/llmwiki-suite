@@ -175,8 +175,8 @@ python -c "
 import json
 b = json.load(open('eval_reports/recall-eval-before-tune.json'))
 a = json.load(open('eval_reports/recall-eval-after-tune.json'))
-print('before:', b['summary']['recall'], b['summary']['mrr'])
-print('after :', a['summary']['recall'], a['summary']['mrr'])
+print('before:', b['summary']['contextual_recall'], b['summary']['mrr'])
+print('after :', a['summary']['contextual_recall'], a['summary']['mrr'])
 "
 ```
 

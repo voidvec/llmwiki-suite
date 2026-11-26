@@ -36,7 +36,7 @@ flowchart TB
     RETRIEVE -->|读源 .md| CORE[kb_core<br/>铁律/FM/词表]
     RETRIEVE -->|启动加载| IDX[(kb-index.json<br/>单一事实源)]
     ASSIST -->|拼 prompt + 调 LLM| LLM[(OpenAI 兼容<br/>/chat/completions)]
-    IDX -. 由 _gen_query_index.py 生成 .-> RETRIEVE
+    IDX -. 由 llmwiki index (gen_index.py) 生成 .-> RETRIEVE
     subgraph BG[后台自动化]
       LINT[lint.py]
       INGEST[ingest.py]
@@ -44,11 +44,11 @@ flowchart TB
     BG -. 写入/校验 .-> IDX
 ```
 
-五层职责（自下而上）：
+六层职责（自下而上）：
 
 | 层 | 模块 | 职责 | 三方依赖 |
 |---|---|---|---|
-| 存储/索引 | `kb-index.json`（生成器 `llmwiki index`） | 单一事实源：16 字段文档（含正文 `body_text` / `body_text_clean` 双变体）+ 分类/标签倒排表 | 无 |
+| 存储/索引 | `kb-index.json`（生成器 `llmwiki index`） | 单一事实源：20 字段文档（含正文 `body_text` / `body_text_clean` 双变体）+ 分类/标签倒排表 | 无 |
 | 召回 | `recall.py` → `KbRetriever` | BM25 召回（K1=1.5/B=0.75，正文索引 + Wikilink 图扩展补位，`min_score=0.15` + 每词阈值 1.0 查询长度感知门槛）+ 章节级取数 + 索引过期检测（P3：`check_freshness()` 磁盘指纹三向比对，~11 ms/188 篇） | 无（标准库） |
 | 共享核心 | `kb_core.py` | 链接判死铁律、frontmatter 解析、受控词表（唯一事实源） | 无 |
 | 应答编排 | `assistant.py` → `KbAssistant` | 召回 → 拼 prompt → 调 LLM → 附来源（与传输解耦）；`answer_stream()` / `call_llm_stream()` 提供流式生成（P3：`stream=True` 逐 chunk） | 无（urllib 调 LLM） |

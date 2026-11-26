@@ -41,7 +41,7 @@ llmwiki query "你的第一个问题"
 
 <!-- 二维码占位：将下方 img 换成真实公众号二维码 -->
 <p align="center">
-  <img src="../assets/qrcode-wechat-placeholder.png" alt="公众号二维码" width="160"/>
+  <img src="../../assets/qrcode-wechat-placeholder.png" alt="公众号二维码" width="160"/>
 </p>
 
 > 求个 ⭐ Star，让更多人看到这个项目。 🙏

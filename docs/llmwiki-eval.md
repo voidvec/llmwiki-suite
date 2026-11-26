@@ -54,6 +54,7 @@ llmwiki eval [--repo <kb>] [--queries <file.json>] [--demo] [--seed [--seed-limi
 | `--out-dir <dir>` | `<repo>/eval_reports/` | 报告输出目录 |
 | `--tag <label>` | `baseline-YYYY-MM-DD` | 报告/快照文件名标签（用于 before/after 对比） |
 | `--retriever-desc <str>` | 内置检索器描述 | 覆盖 meta 中的检索器描述（记录用） |
+| `--chart` | 关 | 额外生成自包含 SVG 评估图表（指标卡 + 逐条命中） |
 
 ---
 

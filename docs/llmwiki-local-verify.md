@@ -48,7 +48,7 @@ pip install -e "D:\work\development\Repos\docs\llmwiki-suite[serve]"
 
 ---
 
-## 4. 验证安装（editable 指向本地源码 + 版本 + CLI 8 命令）
+## 4. 验证安装（editable 指向本地源码 + 版本 + CLI 9 命令）
 
 ```bash
 llmwiki --version

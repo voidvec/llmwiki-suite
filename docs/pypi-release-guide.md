@@ -15,7 +15,7 @@ updated: "2026-08-25"
 # 发布到 PyPI 操作指南
 
 > 目标：把 `llmwiki-suite` 从「GitHub 直装」升级为「PyPI 可 `pip install llmwiki-suite`」。
-> 前置：`pyproject.toml` 已就绪（含 `[project.optional-dependencies] wechat`）、构建/校验工具链已装（`build` + `twine`）、`dist/` 已产出通过 `twine check`。
+> 前置：`pyproject.toml` 已就绪（含 `[project.optional-dependencies] serve`；`wechat` 为 0.1.5 前的兼容旧名）、构建/校验工具链已装（`build` + `twine`）、`dist/` 已产出通过 `twine check`。
 
 ---
 

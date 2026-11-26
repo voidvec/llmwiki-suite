@@ -49,5 +49,5 @@ body:
       label: 影响范围（已知）
       options:
         - label: 核心包（src/llmwiki）——零第三方依赖
-        - label: wechat extras（fastapi/uvicorn）
+        - label: serve extras（fastapi/uvicorn）
         - label: 文档 / 脚手架

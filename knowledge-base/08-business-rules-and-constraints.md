@@ -110,7 +110,7 @@ confidence: high
 
 - `scope-freeze.md` 签署栏空白，仓库内无签署记录；C 类规则是否正式生效以仓库内记录为准（PR-03 / PR-04 P3-6）。
 - 「推理预算熔断默认 600s」在 `SECURITY.md` 是安全底线，但 `LLM_WIKI_INGEST_LLM_TOTAL_TIMEOUT` 可被环境变量任意调大，是否需上限约束未定。
-- `resolve_md_link` 对非 `.md` 目标用 `os.path.exists(os.path.join(repo, joined))`，未见绝对路径 / 父目录穿越防护（仅判存在不读内容），是否需补强待评估。
+- ~~`resolve_md_link` 对非 `.md` 目标用 `os.path.exists`，未见绝对路径 / 父目录穿越防护~~ **已于 0.1.8 统一**：`.md` 与非 `.md` 两类目标都改用 `kb_core._exists_exact`——逐级 `listdir` 大小写严格比对、拒绝含 `..` 的目标（越出仓库即按不存在处理）、只认文件不认目录（目录目标必须走 `by_dir` 表，严格口径下不认）。仅判存在不读内容，无信息泄露面。
 - D 类规则的 enforcement 完全依赖人工，没有自动化检查；是否值得落脚本待定。
 
 ## 7. 主要依据

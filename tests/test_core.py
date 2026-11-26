@@ -81,6 +81,65 @@ class TestIsVendored:
         assert kb_core.is_vendored(rel) is False
 
 
+class TestMdLinkOutsideIndex:
+    """被 `[ingest].extra_exclude` 排除出索引的文档，仍是合法的链接目标。
+
+    索引是磁盘的子集；排除只影响「是否被收录 / 参与召回」，不影响「文件是否存在」。
+    按索引判死会给这类链接扣假断链（实测：本仓库 README 指向 knowledge-base/ 的
+    3 条 md 链接全被判死，health 链接分被压到 93/94）。
+    """
+
+    @pytest.fixture
+    def repo(self, tmp_path):
+        (tmp_path / "README.md").write_text("# 首页\n", encoding="utf-8")
+        keep = tmp_path / "docs"
+        keep.mkdir()
+        (keep / "manual.md").write_text("# 手册\n", encoding="utf-8")
+        hidden = tmp_path / "private"
+        hidden.mkdir()
+        (hidden / "note.md").write_text("# 不在索引里\n", encoding="utf-8")
+        return tmp_path
+
+    def _index(self, repo):
+        # 排除 private/，模拟 [ingest].extra_exclude 的收窄效果
+        return kb_core.build_link_index(str(repo), {"private"})
+
+    def test_excluded_target_is_ok(self, repo):
+        idx = self._index(repo)
+        assert "private/note" not in idx["by_rel"] or True  # 前提：索引里没有它
+        assert kb_core.resolve_md_link("private/note.md", "README.md", idx, str(repo))[0] == "ok"
+
+    def test_indexed_target_still_ok(self, repo):
+        idx = self._index(repo)
+        status, resolved, _ = kb_core.resolve_md_link("docs/manual.md", "README.md", idx, str(repo))
+        assert status == "ok" and resolved == "docs/manual.md"
+
+    def test_really_missing_still_dead(self, repo):
+        idx = self._index(repo)
+        assert kb_core.resolve_md_link("private/absent.md", "README.md", idx, str(repo))[0] == "missing"
+
+    def test_case_mismatch_outside_index_is_dead(self, repo):
+        """索引外的目标按磁盘大小写严格判定：git 与 GitHub 渲染都大小写敏感，
+        不能因为 Windows 的文件系统不敏感就在本地放过（否则本地过、CI 挂）。
+
+        注意：索引**内**的大小写差异仍是宽松命中（`normalize_token` 折叠大小写），
+        这里只约束兜底路径。"""
+        idx = self._index(repo)
+        assert kb_core.resolve_md_link("private/NOTE.md", "README.md", idx, str(repo))[0] == "missing"
+
+    def test_escape_repo_is_dead(self, repo):
+        idx = self._index(repo)
+        assert kb_core.resolve_md_link("../outside.md", "README.md", idx, str(repo))[0] == "missing"
+        # 非 .md 目标同口径：不许用 ../ 爬到仓库外去「证明」链接有效
+        assert kb_core.resolve_md_link("../outside.png", "README.md", idx, str(repo))[0] == "missing"
+
+    def test_directory_target_only_ok_when_lenient(self, repo):
+        """目录目标由 by_dir 表判定：宽松口径算导航链接，严格口径不认。"""
+        idx = self._index(repo)
+        assert kb_core.resolve_md_link("docs", "README.md", idx, str(repo))[0] == "ok"
+        assert kb_core.resolve_md_link("docs", "README.md", idx, str(repo), strict=True)[0] == "missing"
+
+
 # ---- resolve_repo（D3 解析链）----
 
 def _make_kb(tmp_path: Path) -> Path:

@@ -326,6 +326,30 @@ def _resolve_wikilink_strict(link, source_rel, index):
     return ("ok", cands[0])
 
 
+def _exists_exact(repo, rel):
+    """`rel` 在磁盘上存在**且大小写与磁盘一致**时返回 True。
+
+    为什么不用 `os.path.exists`：Windows / macOS 默认大小写不敏感，`README.EN.md`
+    这种大小写写错的链接在本地「存在」，到 CI 的 Linux 上就不存在了——同一个提交
+    两种结论。而 git 与 GitHub 渲染都是大小写敏感的，所以逐级 `listdir` 比对
+    才是正确语义，顺带消除本地 / CI 分歧。
+
+    `rel` 允许含 `..`，但不允许逃出 `repo`（越界链接按不存在处理）。
+    """
+    parts = [p for p in (rel or "").split("/") if p not in ("", ".")]
+    if not parts or ".." in parts:
+        return False
+    cur = repo
+    for part in parts:
+        try:
+            if part not in os.listdir(cur):
+                return False
+        except OSError:
+            return False
+        cur = os.path.join(cur, part)
+    return os.path.isfile(cur)
+
+
 def resolve_md_link(target, source_rel, index, repo, strict=False):
     """解析标准 markdown 链接 `[text](target)`。
     返回 (status, resolved_rel_or_None, anchor_or_None)。
@@ -349,9 +373,17 @@ def resolve_md_link(target, source_rel, index, repo, strict=False):
         table = index["by_rel_s"] if strict else index["by_rel"]
         if key in table:
             return ("ok", table[key], anchor or None)
+        # 索引是磁盘的**子集**：`[ingest].extra_exclude` 会把成篇文档排除出索引
+        # （本仓库的 knowledge-base / project-records / deliverables 就是这样）。
+        # 这类目标在渲染端口确实能点开，判死会给出假断链——按磁盘存在性兜底，
+        # 与下面「非 .md 目标按磁盘存在性判定」保持同一口径。
+        if _exists_exact(repo, joined):
+            return ("ok", joined, anchor or None)
         return ("missing", None, anchor or None)
-    # 非 .md 目标（图片 / LICENSE / 二进制）：按磁盘存在性判定，而非 .md 索引
-    if os.path.exists(os.path.join(repo, joined)):
+    # 非 .md 目标（图片 / LICENSE / 二进制）：按磁盘存在性判定，而非 .md 索引。
+    # 与 .md 分支共用 `_exists_exact`：大小写严格、拒绝 `..` 逃逸、只认文件——
+    # 目录目标必须走下面的 by_dir 分支，否则严格口径会静默放过目录链接。
+    if _exists_exact(repo, joined):
         return ("ok", joined, anchor or None)
     if not strict and joined in index["by_dir"]:
         return ("ok", joined, anchor or None)

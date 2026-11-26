@@ -67,6 +67,8 @@ pre-commit（本地）：check-yaml / whitespace / eof + kb-recall-baseline
 
 链接判死复用 `kb_core` 的归一四铁律；外链跳过（交 lychee 等外部工具，lychee 不认 wikilink）；`.kb-lint-ignore.json` 用正则匹配 `"<rel> :: <detail>"` 隔离历史断链。`--staged` 取 `git diff --cached --name-only --diff-filter=ACMR`；`--sync-vocab` 把索引派生词表并入本次校验（不持久化）。
 
+**索引外的目标不算断链**：索引是磁盘的**子集**（`[ingest].extra_exclude` 会把成篇文档排除出索引）。`.md` 目标在索引未命中时按磁盘存在性兜底，与「非 `.md` 目标按磁盘存在性判定」同口径；兜底用 `_exists_exact`（逐级 `listdir` 比对大小写、拒绝 `..` 逃逸、只认文件），因为 Windows / macOS 文件系统大小写不敏感，会让 `README.EN.md` 在本地「存在」、在 Linux CI 上不存在，同一提交两种结论。目录目标只由 `by_dir` 表判定：宽松口径算导航链接，`--strict-links` 下不认。
+
 **vendored 判定**（`kb_core.is_vendored`）覆盖本地化变体：`README.md` / `CHANGELOG.md` / `CONTRIBUTING.md` / `LICENSE.md` / `SECURITY.md` / `CLAUDE.md` / `CODE_OF_CONDUCT.md` 及其 `.<lang>.md` 形式（`README.en.md`、`README.zh-CN.md`、`CHANGELOG.zh.md`，语言标记为两位字母或 `xx-YY`）。这些文件不参与 FM 校验、不计入 health 完整性分母、不注入召回；`readme-linux.md` 这类"名字像但实为笔记"的文件不受影响。
 
 ### 4.2 eval 四态退出码（`eval_recall.py`）

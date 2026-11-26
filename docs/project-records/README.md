@@ -78,5 +78,5 @@ last_verified: 2026-11-12
 
 ## 5. 已知待办（未随方案 C 处理）
 
-- **索引隔离**：`knowledge-base/` 与 `docs/project-records/` 均未加入 `DEFAULT_EXCLUDE_DIRS`（`src/llmwiki/defaults.py:9-13`），且这些文档 frontmatter 缺 `lint.py:36` 要求的 `description` / `tags` / `difficulty`。对仓库根跑 `llmwiki index` 会收录、`llmwiki lint` 会报 `fm.required`。方案 C 只收敛内容范围，技术隔离仍需单独决策（原台账 P4-5）。
+- ~~**索引隔离**~~ **已于 2026-11-26 处理**：不改 `DEFAULT_EXCLUDE_DIRS`（该默认值对所有用户库生效，不该硬编码本仓库目录名），改用根 `llmwiki.toml` 的 `[ingest].extra_exclude` 排除 `knowledge-base` / `project-records` / `deliverables`；同时给 `docs/` 下 13 份文档补齐 frontmatter。现在仓库根 `llmwiki lint` 为 0 error（默认 + `--strict-links` 双口径，38 份文件），且 `ci.yml` 的 `lint` job 把这条门禁固化下来。原台账 P4-5 关闭。
 - **待补主题**（知识层缺口）：扩展开发指南、故障排查 playbook、数据契约全集、设计决策 ADR、兼容性矩阵、知识库维护元规范。

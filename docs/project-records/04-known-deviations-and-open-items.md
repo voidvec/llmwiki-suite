@@ -151,11 +151,11 @@ P0 与 P1 的修复互不依赖；P2/P3 属计划体系的历史口径差异与�
 
 | # | 事项 | 现状 |
 |---|---|---|
-| P4-1 | `pytest` 全量结果与干净环境安装 | CHANGELOG 0.1.5 记「42 passed」，当前测试文件含 53 个测试函数；未实跑（涉及 P0-4） |
+| P4-1 | `pytest` 全量结果与干净环境安装 | ✅ 已实跑（2026-11-26）：**68 passed**（本机 .venv + Python 3.13，耗时 32.7s）；CI 四版本矩阵 3.11–3.14 同样全绿。此前记的「42 passed」（CHANGELOG 0.1.5）是 0.1.5 时的数量，测试函数随 `--strict-links` 与 vendored 判定新增到 68 |
 | P4-2 | `stats/` 是否由 workflow 逐日真实生成 | 仓库内 2026-09-05~11-25 存在逐日 `obs(daily)` 提交；但 11-06 之前除 09-01（`+0800` 手工）外 65 个 JSON + CSV 的 mtime 全为 2026-11-07 12:00、`fetched_at` 全 `+0000`，且缺 09-02，推测为批量回填（待验证）；11-07 及以后由远端逐日提交补齐 |
 | P4-3 | `open_prs` 口径 | `per_page=1` + `len(pulls)` 恒 0/1，不能作为「无 PR」强证据 |
 | P4-4 | 计划类动作是否在仓库外发生 | HN 发帖、养号、PyPI 上传、CR 评审可能只在站外/本地；仓库内无记录，不能断言绝对未执行 |
-| P4-5 | 新建 `knowledge-base/` 是否应排除出索引 | 本目录未加入 `DEFAULT_EXCLUDE_DIRS`；对仓库根跑 `llmwiki index` 会收录这些 `.md` |
+| P4-5 | 新建 `knowledge-base/` 是否应排除出索引 | ✅ **已决策并关闭（2026-11-26）**：不改 `DEFAULT_EXCLUDE_DIRS`（该值对所有用户库生效），改用根 `llmwiki.toml` 的 `[ingest].extra_exclude` 排除 `knowledge-base` / `project-records` / `deliverables` |
 | P4-6 | 陈旧产物清理 | `dist/` 0.1.3、egg-info 0.1.5、`.venv` editable 指向 0.1.2、`bug_report.yml` placeholder 0.1.1、pypi-guide 全文示例 0.1.0 |
 
 ## 8. 建议的收敛顺序

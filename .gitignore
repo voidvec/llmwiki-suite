@@ -21,6 +21,9 @@ lint-report.json
 # pre-commit 临时评估输出
 .pre-commit-eval/
 
+# pytest 临时工作目录（本地跑测试时重定向到此，避免污染 %TEMP%）
+.pytest_tmp/
+
 # IDE
 .idea/
 .vscode/

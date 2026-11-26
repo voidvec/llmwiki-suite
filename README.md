@@ -65,7 +65,7 @@ git clone https://github.com/voidvec/llmwiki-suite.git
 cd llmwiki-suite
 python -m venv .venv
 # Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
-pip install -e ".[wechat,dev]"       # 全部通道 + 测试/pre-commit 依赖
+pip install -e ".[serve,dev]"        # 全部通道 + 测试/pre-commit 依赖
 pre-commit install                   # 注册仓库级钩子（可选但推荐）
 ```
 
@@ -91,6 +91,7 @@ llmwiki query "..."    # 5. 检索 / 问答
 | `llmwiki index` | 生成 BM25 + wikilink 图检索索引（`kb-index.json`） |
 | `llmwiki query "..."` | 召回最相关章节；配置 `LLM_WIKI_API_KEY` 后基于召回结果生成完整回答 |
 | `llmwiki lint` | 巡检：断链、词表越界、命名规范 |
+| `llmwiki health` | 知识库健康分 0-100（frontmatter 完整性 / 链接健壮性 / 新鲜度），输出自包含 HTML + JSON 报告，零依赖离线可跑（经验版 Beta，健康度参考值） |
 | `llmwiki categories-sync` | 从索引派生全部实际类别并写回 `llmwiki.toml`（`--apply` 写入） |
 | `llmwiki eval` | 用 `<repo>/eval_queries.json` 跑 recall@k / MRR；无评估集可 `--seed` 采样生成，`--demo` 跑内置示例集（`--chart` 输出自包含 SVG 图） |
 | `llmwiki serve` | 启动 FastAPI 桥接服务（`/api/chat` 支持 JSON 与 **SSE 流式**、`/api/recall` JSON 接口 + `/chat` `/recall` 别名、`/healthz`，及 `/webui/chat` 网页问答、`/dashboard` 工作台） |
@@ -167,6 +168,8 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/llmwiki-obs.md` | **曝光监控**：GitHub + PyPI 每日抓取（D4） |
 | `docs/llmwiki-evolution-roadmap.md` | **路线图**：从被动问答到知识库自进化（L0→L3） |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
+
+> 文档分三层：知识层 8 篇（[`knowledge-base/`](knowledge-base/README.md)）、项目记录 6 篇（[`docs/project-records/`](docs/project-records/README.md)）、原有 39 份手册与计划。**全仓权威口径基准**见 [`docs/project-records/00-canonical-baseline.md`](docs/project-records/00-canonical-baseline.md)。计划 / 历史类文档已加状态标注头，请按历史快照阅读。
 
 建议顺序：getting-started → tutorial-01 → 02/03（按需）→ architecture。
 

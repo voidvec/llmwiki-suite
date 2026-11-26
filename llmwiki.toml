@@ -1,0 +1,17 @@
+# llmwiki 配置 —— 本仓库是工具套件自身，不是知识库。
+#
+# 下面两个目录装的是「人读派生文档」（工程知识 / 项目记录），不是笔记：
+# 早期对仓库根执行 `llmwiki index` / `llmwiki lint` 会把它们当普通笔记收录，
+# 既污染召回，又因 frontmatter 形态不同而报 fm.required。
+#
+# 排除按目录 basename 匹配（src/llmwiki/kb_core.py:182 iter_md_files、
+# gen_index.py:88 collect），因此这里写目录名而不是路径。
+#
+# 刻意使用 per-repo 的 [ingest].extra_exclude 追加语义，不改套件
+# DEFAULT_EXCLUDE_DIRS：该默认值对所有用户库生效，不应硬编码本仓库特有的目录名。
+# 这两个目录仍应提交到 Git —— 索引排除 ≠ git 忽略。
+#
+# 三层模型：套件默认 < 本文件 < 环境变量（密钥只走环境变量，本套件不读 .env）。
+
+[ingest]
+extra_exclude = ["knowledge-base", "project-records"]

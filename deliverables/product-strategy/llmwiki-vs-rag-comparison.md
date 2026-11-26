@@ -1,5 +1,12 @@
 # llmwiki-suite vs. local RAG — a fair comparison
 
+> **状态标注（截至 2026-11-26）· [未兑现]**
+> 本文为 2026-09-01 的 D6 对比帖英文草稿（技术观点仍可引用，数字须按历史快照读），仅记录当时的计划 / 决策意图，**不代表仓库现状**；正文一律按历史快照阅读，不作为现状依据。
+> 当前版本为 `0.1.7`（2026-11-26 发布）；原定 W4（09-22）的 `v0.1.7` 已延期落地，而 HN 发布、W37–W44 周报、`docs/cr/`、发布响应台账、pivot / 止损决策、范围冻结签署，仓库内仍无记录。
+> 仓库内无记录 ≠ 确定未执行（外部动作可能发生在仓库外）；观测快照覆盖 2026-09-01 ~ 2026-11-25（缺 09-02），此后无新快照。全仓权威口径见 `docs/project-records/00-canonical-baseline.md`。
+> 次日对比帖发布、真实 `llmwiki query` 截图 / GIF、「how we measured」复现附录仓库内无记录；§4 数字为 2026-08-31 `testkb` 8-query 基线。
+
+
 > Working draft for the HN post thread (W1 · D6). English body, ~700 words.
 > Target reader: HN / overseas developers. Tone: evidence-first, no hype.
 > TODO (owner to review before W2 sign-off): add a real screenshot/gif of `llmwiki query`; verify nashsu/FreeAsk comparators at publish time.

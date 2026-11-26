@@ -18,6 +18,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      # 发错版本是唯一「事后必须回滚 PyPI」的故障，代价远高于多跑一步。
+      # 先在构建前把 tag 与真源对上，不一致直接失败。
+      - name: 校验 tag 与版本号一致
+        run: python scripts/version.py --check-tag "$GITHUB_REF_NAME"
+
       - name: 构建 sdist + wheel
         run: |
           pip install build

@@ -92,8 +92,7 @@ python -m build                # 产出 dist/llmwiki_suite-<version>-*.tar.gz �
 python -m twine check dist/*   # 校验：README 渲染、元数据、包完整性
 ```
 
-> 下文命令里的 `<version>` 一律替换成 `pyproject.toml` 的 `version`（当前 `0.1.8`）。
-> 刻意不写死版本号：这份指南每发一版就会过期一次。
+> 下文命令里的 `<version>` 一律替换成 `pyproject.toml` 的 `version`（用 `python scripts/version.py --next patch` 取下一个版本号，见第 1 步）。
 
 - 若 `build` 未安装：`pip install build`；
 - 若 `twine` 未安装：`pip install twine`；
@@ -139,7 +138,7 @@ python -m twine upload dist/*
 
 ```bash
 pip install "llmwiki-suite[serve]"    # 推荐：核心 + 渠道一把装好
-llmwiki --version                      # 应显示 pyproject.toml 里的 version（当前 0.1.8）
+llmwiki --version                      # 应等于 pyproject.toml 的 version
 ```
 
 - 可以 `pip download llmwiki-suite==<version> --no-deps -d /tmp/check` 看包内结构 `data/` scaffold 是否齐全。
@@ -148,20 +147,41 @@ llmwiki --version                      # 应显示 pyproject.toml 里的 version
 
 ## 版本号管理速记
 
-| 场景 | 处理 |
-|------|------|
-| 修 bug / 微调 | `X.Y.Z` → `X.Y.(Z+1)`（patch） |
-| 加功能（不破坏兼容） | `X.Y.Z` → `X.(Y+1).0`（minor） |
-| 破坏性变更 | `X.Y.Z` → `(X+1).0.0`（major） |
-| 预发布（可选） | `0.2.0rc1` / `0.2.0b1`（会作为 pre-release 展示） |
+| 场景 | 处理 | 命令 |
+|------|------|------|
+| 修 bug / 微调 | patch | `python scripts/version.py --next patch` |
+| 加功能（不破坏兼容） | minor | `--next minor` |
+| 破坏性变更 | major | `--next major` |
+| 预发布（`0.2.0rc1`） | 脚本只认 `X.Y.Z`，手改三处 | — |
 
-**统一改版位置**（三处必须一致，漏一处就会「装出来是旧版本」）：
+### 升版本：一条命令，不要手改
 
-1. `pyproject.toml` 的 `version = "..."` —— 唯一真源
-2. `src/llmwiki/__init__.py` 的 `__version__` —— `llmwiki --version` 读它
-3. `CHANGELOG.md` 新增版本段 —— 与 tag 对应
+```bash
+python scripts/version.py --next patch       # 先看下一个版本号（如 0.1.9）
+python scripts/version.py --set 0.1.9        # dry-run：打印 diff，不写盘
+python scripts/version.py --set 0.1.9 --apply --date $(date +%F)
+python scripts/version.py --check            # 应输出「全部一致」
+```
 
-发版流程：改上述三处 → 提交 → `git tag -a vX.Y.Z` → 推 tag（`release.yml` 自动构建并上传 PyPI + 建 GitHub Release）。
+`--set` 只改**可写落点**：`pyproject.toml`（真源）、`src/llmwiki/__init__.py`、
+`docs/getting-started.md` 的发布状态行与安装锁定版本。实现方式是「锚定正则 + 只替换捕获组」，
+**不做全仓文本替换**——同一个版本号在文档里有三种语义（当前版本 / 历史事实 / 版本线叙述），
+全局替换必然把 `0.1.3 起`、CHANGELOG 历史段一起改坏。
+
+**仍需人工补齐**（脚本结束时会提示）：
+
+1. `CHANGELOG.md` 加 `## [X.Y.Z] - YYYY-MM-DD` 段 —— `--check` 校验段头存在且等于真源
+2. `docs/project-records/00-canonical-baseline.md` 的「当前版本 / 版本 tag / 时间线」
+
+### 三道门禁
+
+| 位置 | 检查 | 拦住什么 |
+|------|------|---------|
+| `ci.yml` 的 `version` job | `version.py --check` | 改了 `pyproject.toml` 忘改 `__init__.py`；文档锚点漂移；版本硬编码回潮 |
+| `release.yml` 首步 | `version.py --check-tag $GITHUB_REF_NAME` | 打了 `v0.1.9` 的 tag 却发出 `0.1.8` 的包 |
+| KB 仓 `kb-ci.yml` 的 `suite-ref` job | `check_suite_ref.py` | `LLMWIKI_REF` 指向不存在的 tag，或头注释里的 commit 与实际指向不符 |
+
+发版流程：`version.py --set` → 补 CHANGELOG 与基准 → 提交 → `git tag -a vX.Y.Z` → 推 tag（`release.yml` 先校验 tag 与版本号一致，再构建上传 PyPI + 建 GitHub Release）。
 
 ---
 

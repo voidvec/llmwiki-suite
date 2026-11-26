@@ -147,6 +147,8 @@ P0 与 P1 的修复互不依赖；P2/P3 属计划体系的历史口径差异与�
 
 10. **`0.1.3` 从未发版（2026-11-26 核实）**：CHANGELOG 有 `[0.1.3]` 正文、仓库有对应代码，但 `git tag` 与 PyPI `releases` 都没有 0.1.3。这不是「仓库内无记录」而是**确实没发布**——它的改动被 0.1.4 覆盖了，补发无意义，只需在引用版本序列时排除（PyPI 实际为 0.1.0/1/2/4/5/6/7/8 共 8 版）。与之相反的是 `0.1.2`：有 tag、有 PyPI 记录，CHANGELOG 却没正文。两个方向的口径缺口都已写进基准 §0.1。
 
+11. ~~版本号漂移无门禁~~ **已于 2026-11-26 关闭**：此前 7 个落点全靠手工对齐，且 11 篇计划 / 历史文档的状态头把当前版本号写进正文——那个写法本身又成了新的漂移面，每发一版就全成假话（第 10 条的 `0.1.3` 未发版、`0.1.2` 有 tag 无正文，都是同类缺位的产物）。现由 `scripts/version.py` 承担升级与校验：`--set` 定向改写可写落点、`--check` 校验 6 个落点并禁止版本硬编码回潮、`--check-tag` 在发版前对齐 tag。门禁三处——`ci.yml` 的 `version` job、`release.yml` 首步、KB 仓 `kb-ci.yml` 的 `suite-ref` job。
+
 另外：README 两版的「文档」索引分别只列 9 / 11 篇，均未收录 `scope-freeze / release-plan / RELEASE / remote-onboarding / *-verify / eval-seed-design / webui-dashboard-design / hn-* / weekly / community / weekly-report-template` 等 20 篇。
 
 ## 7. 不确定 / 待补充项：P4 待验证与待决策

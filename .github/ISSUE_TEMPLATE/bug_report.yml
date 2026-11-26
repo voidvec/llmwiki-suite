@@ -16,7 +16,7 @@ body:
     attributes:
       label: 版本与环境
       description: "运行 `llmwiki --version` 与 `python --version`，粘贴结果"
-      placeholder: "llmwiki 0.1.8 · Python 3.12.4（版本随发布更新，以 PyPI 最新为准）"
+      placeholder: "llmwiki <版本> · Python 3.12.4（以 PyPI 最新为准）"
     validations:
       required: true
   - type: dropdown

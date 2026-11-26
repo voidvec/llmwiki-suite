@@ -169,7 +169,7 @@ llmwiki serve --host 127.0.0.1 --port 8000
 | `docs/llmwiki-evolution-roadmap.md` | **路线图**：从被动问答到知识库自进化（L0→L3） |
 | `docs/llmwiki-architecture.md` | 系统架构：分层设计、通道抽象 |
 
-> 文档分三层：知识层 8 篇（[`knowledge-base/`](knowledge-base/README.md)）、项目记录 6 篇（[`docs/project-records/`](docs/project-records/README.md)）、原有 39 份手册与计划。**全仓权威口径基准**见 [`docs/project-records/00-canonical-baseline.md`](docs/project-records/00-canonical-baseline.md)。计划 / 历史类文档已加状态标注头，请按历史快照阅读。
+> 文档分三层：知识层 8 篇（[`knowledge-base/`](knowledge-base/README.md)）、项目记录 6 篇（[`docs/project-records/`](docs/project-records/README.md)）、原有 39 份手册与计划。**全仓权威口径基准**见 [`docs/project-records/00-canonical-baseline.md`](docs/project-records/00-canonical-baseline.md)。计划 / 历史类文档已加状态标注头，请按历史快照阅读。三层中只有面向使用者的 `docs/` 进本仓库的召回索引（`knowledge-base/`、`docs/project-records/`、`deliverables/` 由根 `llmwiki.toml` 排除，理由见该文件注释）。
 
 建议顺序：getting-started → tutorial-01 → 02/03（按需）→ architecture。
 

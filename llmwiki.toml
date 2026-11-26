@@ -1,17 +1,29 @@
 # llmwiki 配置 —— 本仓库是工具套件自身，不是知识库。
 #
-# 下面两个目录装的是「人读派生文档」（工程知识 / 项目记录），不是笔记：
-# 早期对仓库根执行 `llmwiki index` / `llmwiki lint` 会把它们当普通笔记收录，
-# 既污染召回，又因 frontmatter 形态不同而报 fm.required。
+# 收录范围只有「面向使用者的文档」：`docs/`（手册 / 教程 / 发布记录）、`testkb/`
+# 演示库、`tests/fixtures/kb` 夹具。三类内容**不进索引**：
 #
-# 排除按目录 basename 匹配（src/llmwiki/kb_core.py:182 iter_md_files、
-# gen_index.py:88 collect），因此这里写目录名而不是路径。
+#   1. 派生的人读文档 —— `knowledge-base/`（工程知识）、`docs/project-records/`
+#      （项目记录）。它们由代码与仓库事实二次加工而来，不是笔记；收进索引既污染
+#      召回，又因 frontmatter 形态不同而报 fm.required。
+#   2. 对外材料与过程产物 —— `deliverables/`（HN 草稿、竞品对比、路线图、执行契约）。
+#      它们是发布物料与计划载体，不是可查询的知识条目。
+#   3. vendored 仓库元数据 —— README / CHANGELOG / SECURITY 及其本地化变体
+#      （`README.en.md`）。由套件 is_vendored() 统一跳过，无需在此配置。
+#
+# 排除按目录 basename 匹配（src/llmwiki/kb_core.py:iter_md_files、gen_index.py），
+# 因此这里写目录名而不是路径；这些目录仍应提交到 Git —— 索引排除 ≠ git 忽略。
 #
 # 刻意使用 per-repo 的 [ingest].extra_exclude 追加语义，不改套件
 # DEFAULT_EXCLUDE_DIRS：该默认值对所有用户库生效，不应硬编码本仓库特有的目录名。
-# 这两个目录仍应提交到 Git —— 索引排除 ≠ git 忽略。
 #
 # 三层模型：套件默认 < 本文件 < 环境变量（密钥只走环境变量，本套件不读 .env）。
 
 [ingest]
-extra_exclude = ["knowledge-base", "project-records"]
+extra_exclude = ["knowledge-base", "project-records", "deliverables"]
+
+# 受控词表在本仓库按**追加**语义扩展（默认 7 类之上加 3 类）。
+# 套件默认词表面向个人知识管理，装不下「工具套件自身在运营」这件事：发布计划、
+# 周报、公开评测报告都属于它的日常产出，硬塞进「工具指南」只会让分类失去意义。
+[categories]
+allowed = ["发布运营", "运营周报", "评测报告"]

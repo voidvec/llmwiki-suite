@@ -190,7 +190,7 @@ All docs live in `docs/`, organized entry → advanced → reference:
 | `docs/obsidian-guide.md` | Optional: use Obsidian as frontend editor |
 | `docs/pypi-release-guide.md` | Maintainers: PyPI publishing guide (register / 2FA / token / twine) |
 
-> Docs are split into three layers: 8 knowledge pages ([`knowledge-base/`](knowledge-base/README.md)), 6 project records ([`docs/project-records/`](docs/project-records/README.md)), and the original 39 manuals and plans. **Repository-wide canonical facts** live in [`docs/project-records/00-canonical-baseline.md`](docs/project-records/00-canonical-baseline.md). Plan/history docs carry a status banner and should be read as historical snapshots.
+> Docs are split into three layers: 8 knowledge pages ([`knowledge-base/`](knowledge-base/README.md)), 6 project records ([`docs/project-records/`](docs/project-records/README.md)), and the original 39 manuals and plans. **Repository-wide canonical facts** live in [`docs/project-records/00-canonical-baseline.md`](docs/project-records/00-canonical-baseline.md). Plan/history docs carry a status banner and should be read as historical snapshots. Only the user-facing `docs/` tree is ingested into this repo's retrieval index (`knowledge-base/`, `docs/project-records/` and `deliverables/` are excluded via the root `llmwiki.toml`; see the comments there).
 
 Suggested order: getting-started → tutorial-01 → 02/03 (as needed) → architecture.
 

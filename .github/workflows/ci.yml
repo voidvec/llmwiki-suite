@@ -37,3 +37,21 @@ jobs:
           pip install build twine
           python -m build
           python -m twine check dist/*
+
+  # 自检（dogfood）：本仓库自己的文档要过自己定的门禁。
+  # 收录范围见根 llmwiki.toml —— 只收面向使用者的 docs/ 与测试夹具，
+  # knowledge-base/ project-records/ deliverables/ 三层不进索引。
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: 安装核心
+        run: pip install .
+      - name: lint 自检（默认 + 严格链接口径）
+        run: |
+          llmwiki lint
+          llmwiki lint --strict-links

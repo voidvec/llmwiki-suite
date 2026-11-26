@@ -23,7 +23,7 @@ last_verified: 2026-11-26
 | 项 | 权威值 | 取证位置 |
 |---|---|---|
 | 当前版本 | `0.1.8`，发布日 2026-11-26 | `pyproject.toml:7`、`src/llmwiki/__init__.py:3`、`CHANGELOG.md` `[0.1.8] - 2026-11-26`、PyPI 元数据、GitHub Release `v0.1.8` |
-| 待发布段 | `[Unreleased]` 为空；`v0.1.7` 与 `v0.1.8` 同日发布：tag + PyPI wheel/sdist + GitHub Release（0.1.7 于 10:57 CST，0.1.8 于 12:0x CST） | `CHANGELOG.md`、`git tag`、`gh release list`、`pypi.org/pypi/llmwiki-suite/json` |
+| 待发布段 | `[Unreleased]` 为空；`v0.1.7` 与 `v0.1.8` 同日发布：tag + PyPI wheel/sdist + GitHub Release（0.1.7 于 10:57 CST、0.1.8 于 11:48 CST，`pypi.org/pypi/llmwiki-suite/json` 可查） | `CHANGELOG.md`、`git tag`、`gh release list`、`pypi.org/pypi/llmwiki-suite/json` |
 | 工程侧最后功能变更 | 0.1.8（2026-11-26）：Markdown 链接对「索引外文件」不再判死（大小写严格 + 拒绝 `..` 逃逸的存在性兜底）、`is_vendored` 认 `README.<lang>.md` 等本地化变体 | `git log`、`src/llmwiki/kb_core.py` |
 | CLI 子命令 | **9** 个：`init / ingest / index / query / lint / categories-sync / eval / health / serve` | `src/llmwiki/cli.py` 的 `build_parser()` |
 | 观测快照 | `stats/` 85 份，覆盖 2026-09-01 ~ 2026-11-25（缺 09-02），`obs(daily)` 仍在继续 | `stats/`、`git log` 的 `obs(daily)` 提交 |

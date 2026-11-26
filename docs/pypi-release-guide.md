@@ -9,7 +9,7 @@ tags:
 difficulty: "intermediate"
 estimated_time: "15分钟"
 created: "2026-08-25"
-updated: "2026-08-25"
+updated: "2026-11-26"
 ---
 
 # 发布到 PyPI 操作指南
@@ -88,9 +88,12 @@ password = pypi-XXXXXXXXXXXXXXXX
 ## 第 4 步：构建 + 校验（可重复安全做）
 
 ```bash
-python -m build                # 产出 dist/llmwiki_suite-0.1.0-*.tar.gz 和 *.whl
+python -m build                # 产出 dist/llmwiki_suite-<version>-*.tar.gz 和 *.whl
 python -m twine check dist/*   # 校验：README 渲染、元数据、包完整性
 ```
+
+> 下文命令里的 `<version>` 一律替换成 `pyproject.toml` 的 `version`（当前 `0.1.8`）。
+> 刻意不写死版本号：这份指南每发一版就会过期一次。
 
 - 若 `build` 未安装：`pip install build`；
 - 若 `twine` 未安装：`pip install twine`；
@@ -104,7 +107,7 @@ python -m twine check dist/*   # 校验：README 渲染、元数据、包完整�
 
 ```bash
 # 装 TestPyPI 指明的发布用包（也可用 build 重出）
-pip install --index-url https://test.pypi.org/simple/ llmwiki-suite==0.1.0   #（若已传）
+pip install --index-url https://test.pypi.org/simple/ llmwiki-suite==<version>   #（若已传）
 
 # 上传到 TestPyPI
 python -m twine upload --repository testpypi dist/*
@@ -136,10 +139,10 @@ python -m twine upload dist/*
 
 ```bash
 pip install "llmwiki-suite[serve]"    # 推荐：核心 + 渠道一把装好
-llmwiki --version                      # 应显示 0.1.0（注意命令是 llmwiki）
+llmwiki --version                      # 应显示 pyproject.toml 里的 version（当前 0.1.8）
 ```
 
-- 可以 `pip download llmwiki-suite ==0.1.0 --no-deps -d /tmp/check` 看包内结构 `data/` scaffold 是否齐全。
+- 可以 `pip download llmwiki-suite==<version> --no-deps -d /tmp/check` 看包内结构 `data/` scaffold 是否齐全。
 
 ---
 
@@ -147,12 +150,18 @@ llmwiki --version                      # 应显示 0.1.0（注意命令是 llmwi
 
 | 场景 | 处理 |
 |------|------|
-| 修 bug / 微调 | `0.1.0` → `0.1.1`（patch） |
-| 加功能（不破坏兼容） | `0.1.0` → `0.2.0`（minor） |
-| 破坏性变更 | `0.1.0` → `1.0.0`（major） |
+| 修 bug / 微调 | `X.Y.Z` → `X.Y.(Z+1)`（patch） |
+| 加功能（不破坏兼容） | `X.Y.Z` → `X.(Y+1).0`（minor） |
+| 破坏性变更 | `X.Y.Z` → `(X+1).0.0`（major） |
 | 预发布（可选） | `0.2.0rc1` / `0.2.0b1`（会作为 pre-release 展示） |
 
-**统一改版位置**：`pyproject.toml` 的 `version = "..."`；建议同时在 `src/llmwiki/__init__.py` 的 `__version__` 同步（二处保持一致）。
+**统一改版位置**（三处必须一致，漏一处就会「装出来是旧版本」）：
+
+1. `pyproject.toml` 的 `version = "..."` —— 唯一真源
+2. `src/llmwiki/__init__.py` 的 `__version__` —— `llmwiki --version` 读它
+3. `CHANGELOG.md` 新增版本段 —— 与 tag 对应
+
+发版流程：改上述三处 → 提交 → `git tag -a vX.Y.Z` → 推 tag（`release.yml` 自动构建并上传 PyPI + 建 GitHub Release）。
 
 ---
 

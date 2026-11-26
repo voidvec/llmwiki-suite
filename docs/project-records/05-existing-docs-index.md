@@ -59,7 +59,7 @@ confidence: medium
 |---|---|---|
 | `README.md` | 中文主门面：slogan、30 秒接入、命令表（2026-11-11 已补齐 `health`）、4 通道、厂商表、文档索引 | `[部分过时]`（文档索引仍不全） |
 | `README.en.md` | 英文门面：Why compile instead of RAG 对比表、三条承诺、命令表含 health、docs 索引较全；回调路径已于 2026-11-11 修正为 `/wechat/callback` | `[部分过时]`（其余微调见 PR-04） |
-| `CHANGELOG.md` | Keep a Changelog + SemVer 版本史（0.1.0–0.1.6，0.1.2 无正文，Unreleased 空） | `[现行]` |
+| `CHANGELOG.md` | Keep a Changelog + SemVer 版本史（0.1.0–0.1.8，0.1.2 无正文，Unreleased 空） | `[现行]` |
 | `CONTRIBUTING.md` | 开发安装、pytest 与独立召回基线、Conventional Commits、PR 四步 | `[现行]` |
 | `SECURITY.md` | 私有漏洞报告 + 48h 确认、密钥只走 env、600s 熔断、最小权限、支持版本表 | `[现行]` |
 | `LICENSE` | MIT，`Copyright (c) 2026 Luca` | `[现行]` |
@@ -68,7 +68,7 @@ confidence: medium
 
 | 文件 | 作用 | 级别 |
 |---|---|---|
-| `docs/getting-started.md` | 五步接入 + 网页问答 / SSE curl 示例 + 3 条铁律；frontmatter 停在 0.1.0 | `[部分过时]` |
+| `docs/getting-started.md` | 五步接入 + 网页问答 / SSE curl 示例 + 3 条铁律；正文已更到 0.1.8，frontmatter `updated` 仍停在 2026-08-24 | `[部分过时]` |
 | `docs/remote-onboarding.md` | 另一台机器 / 别人的库：PyPI 直装、多库切换、升级；公开/私有措辞矛盾 | `[部分过时]` |
 | `docs/llmwiki-local-verify.md` | 知识库重建流程、**用户资产边界**（哪些可删）、editable 安装全链路；2026-11-11 已改为「CLI 9 命令」 | `[部分过时]`（其余按历史快照读） |
 | `docs/llmwiki-channel-verify.md` | 飞书/Telegram 本机验证：env 清单、`/healthz`、SSE、challenge 与 HMAC 脚本、7 条验收 | `[部分过时]` |
@@ -101,7 +101,7 @@ confidence: medium
 |---|---|---|
 | `docs/scope-freeze.md` | M0 范围冻结公告（**待签署**）：D1–D12、六条 Non-Goals、四条决策、C0/C1/C2 | `[历史]` |
 | `docs/release-plan.md` | W4 硬发布执行预案：周二 06:00-09:00 PT、发布日/次日/48h Checklist、回复窗口 | `[历史]` |
-| `docs/pypi-release-guide.md` | 维护者 PyPI 六步指南：2FA、project-scoped token、twine 凭证、TestPyPI 先行、版本同步 | `[部分过时]`（示例停在 0.1.0） |
+| `docs/pypi-release-guide.md` | 维护者 PyPI 六步指南：2FA、project-scoped token、twine 凭证、TestPyPI 先行、版本同步；示例改用 `<version>` 占位 + 三处改版位置（不再写死版号） | `[现行]` |
 | `docs/llmwiki-webui-dashboard-design.md` | `/webui/chat` + `/dashboard` 设计稿：P0–P3（P4 取消）、安全原则、开放问题 | `[历史]` |
 | `docs/hn-launch-timing.md` | HN 时机探测：karma/账号龄门槛、窗口、标题 <70 字符、首评节奏 | `[历史]` |
 | `docs/hn-account-growth.md` | HN 养号作战计划：karma 1→+49、时间线、主题池、5 条红线；2026-11-07 回填提交 `c57c718`（D8 重排），正文仍为 9 月初计划（W4 发布日 09-22），发布仓库内无记录 | `[历史]` |
@@ -122,7 +122,7 @@ confidence: medium
 
 | 文件 | 作用 | 级别 |
 |---|---|---|
-| `.github/ISSUE_TEMPLATE/bug_report.yml` | Bug 表单：先跑 lint/eval、版本环境、7 类组件、2 条自查 | `[部分过时]`（placeholder 0.1.1） |
+| `.github/ISSUE_TEMPLATE/bug_report.yml` | Bug 表单：先跑 lint/eval、版本环境、7 类组件、2 条自查；placeholder 已更到 0.1.8 | `[现行]` |
 | `.github/ISSUE_TEMPLATE/feature_request.yml` | 功能建议表单：6 类、要求附 eval 数字、影响范围（旧名已于 2026-11-11 统一为 serve extras） | `[现行]` |
 | `.github/ISSUE_TEMPLATE/docs_usage.yml` | 文档改进 / 使用咨询表单（0.1.5 新增） | `[现行]` |
 | `.github/DISCUSSION_TEMPLATE/show-and-tell.md` | Show & Tell 模板：库主题/规模、接入路径、踩坑、质量自评 | `[现行]` |

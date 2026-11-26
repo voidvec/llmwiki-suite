@@ -10,8 +10,8 @@ kind: knowledge-base
 status: derived
 scope: lint / eval / health 三套机制、召回基线门禁、pytest 与 CI/pre-commit 矩阵、阈值双口径
 audience: 维护者、贡献者、发布执行者
-last_verified: 2026-11-11
-reconciled_against: 仓库口径基准 v1 · 2026-11-11
+last_verified: 2026-11-26
+reconciled_against: 仓库口径基准 v1 · 2026-11-26
 confidence: high
 ---
 
@@ -31,7 +31,7 @@ confidence: high
 | `llmwiki eval` | ❌ 不判达标 | 只产出报告；缺集/缺索引报错 | 0 / 2 / 3 |
 | `check_recall_baseline.py` | ✅ 阻断 | recall ≥0.95 且 MRR ≥0.90 | 0 / 1 / 2 |
 | `llmwiki health` | ❌ 参考 | 0–100 分，不阻断 | 恒 0 |
-| `pytest` | ✅ CI 阻断 | 53 个测试函数 | pytest 语义 |
+| `pytest` | ✅ CI 阻断 | 74 个用例 | pytest 语义 |
 | `python -m twine check dist/*` | ✅ CI 阻断 | 包元数据合法 | 构建语义 |
 
 **公开基线实测**：8 条 query，全部 Top-1 命中，`contextual_recall@4 = 1.0`、`MRR@4 = 1.0`、`contextual_recall_prod = 1.0`、`missed_queries = []`。
@@ -98,9 +98,9 @@ pre-commit（本地）：check-yaml / whitespace / eof + kb-recall-baseline
 
 ### 4.5 测试与 CI 矩阵
 
-`tests/test_core.py` 50 个用例 + `tests/test_recall_baseline.py` 3 个 = **53 个测试函数**，13 个测试类。分组覆盖：分词、FM 解析、repo 解析、配置合并（含 categories 增量）、锚点 slug（8 例）、eval 无集四态、git mv、iLink 激活、`/api/*` 路由、SSE 事件序（7 例）。
+`tests/test_core.py` 71 个用例 + `tests/test_recall_baseline.py` 3 个 = **74 个用例**（15 个测试类）。分组覆盖：分词、FM 解析、repo 解析、配置合并（含 categories 增量）、锚点 slug（8 例）、eval 无集四态、git mv、iLink 激活、`/api/*` 路由、SSE 事件序（7 例）、vendored 本地化变体（12 例：6 正 6 反）、链接存在性判定（索引外算 ok / 大小写不符判死 / `..` 逃逸判死 / 目录目标仅宽松口径 ok）。
 
-`.github/workflows/ci.yml`：push/PR 到 `main`，matrix `3.11 / 3.12 / 3.13 / 3.14`，步骤 `checkout@v7 → setup-python@v7 → pip install . → pip install ".[wechat,dev]" → pytest → 基线回归 → build → twine check`。其中 `[wechat]` 是 CI 沿用的 0.1.5 前兼容别名，新写命令一律用 `[serve]`（口径基准 §0.3）。`.pre-commit-config.yaml` 另有 `check-yaml(--unsafe)` / `trailing-whitespace` / `end-of-file-fixer`，但 `exclude` 把所有 workflow YAML 排除在外。
+`.github/workflows/ci.yml`：push/PR 到 `main`，matrix `3.11 / 3.12 / 3.13 / 3.14`。三个 job —— `lint`（本仓文档过自己的门禁，默认 + `--strict-links` 双口径）、`tests`（`pip install .` → `pip install ".[wechat,dev]"` → `pytest` → 基线回归）、`build`（`build` → `twine check`）。其中 `[wechat]` 是 CI 沿用的 0.1.5 前兼容别名，新写命令一律用 `[serve]`（口径基准 §0.3）。`.pre-commit-config.yaml` 另有 `check-yaml(--unsafe)` / `trailing-whitespace` / `end-of-file-fixer`，但 `exclude` 把所有 workflow YAML 排除在外。
 
 用户库脚手架 `kb-lint.yml`：`cron "0 19 * * *"`（UTC，约北京次日 03:00）+ `workflow_dispatch` + push `**/*.md`，跑 `llmwiki lint` 并上传 `lint-report.json`。
 
@@ -125,7 +125,7 @@ pre-commit（本地）：check-yaml / whitespace / eof + kb-recall-baseline
 
 ## 6. 不确定 / 待补充项
 
-- 未实跑 `pytest` 与干净环境的 `pip install ".[wechat,dev]"`（沿用 CI 的兼容别名写法，等价于 `.[serve,dev]`）；CHANGELOG 0.1.5 记录「42 passed」，而当前测试文件含 53 个测试函数，两者差异未核实（可能是版本演进，也可能含参数化）。
+- `pytest` 已实跑（2026-11-26，套件 0.1.8）：**74 passed**（本机 `.venv` / Python 3.13 / 33.7s），CI 四版本矩阵 3.11–3.14 同步全绿。「CHANGELOG 记 42 passed、测试文件含 53 个函数」的旧差异已澄清：42 是 0.1.5 时的数量，此后 `--strict-links`（0.1.7）、`is_vendored` 本地化变体与链接存在性判定（0.1.8）各自新增用例，累计到 74。CI 安装仍用兼容别名 `.[wechat,dev]`（等价 `.[serve,dev]`），属刻意保留的旧路径验证。
 - `httpx2` 与 `fastapi.testclient` 的模块别名兼容性可能导致 `TestApiRoutes` / `TestSseStream` 在干净环境失败（PR-04），需实测。
 - `scaffold/kb-lint.yml` 含 `<you>` 占位符；`upload-artifact` 的 `lint-report.json` 是否稳定产出未验证。
 - `docs/llmwiki-eval.md` 的「全部命令行选项」原漏 `--chart`、`tutorial-03` 的对比脚本原用错字段名，两处均于 2026-11-11 修正（PR-04 §1 修订记录）；`llmwiki-eval.md` 的章节编号重复仍需重排。

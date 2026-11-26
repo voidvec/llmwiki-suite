@@ -25,7 +25,7 @@ confidence: medium
 
 ## 1. 背景
 
-项目 2026-08-24 前后完成套件化，8 天内密集发版；2026-08-31 产出 Q4 九周防漂移执行契约（`scope-freeze` / `implementation-plan-dod` / `roadmap-update`），计划 W1–W9（2026-08-31 → 2026-11-02）以海外发布与观测收口。此后 `stats/` 每日快照持续到 2026-11-25，2026-11-11 建立 `knowledge-base/` 共 14 篇派生文档；**工程侧停滞 87 天（2026-08-31 → 2026-11-25），2026-11-26 以 `0.1.7` 恢复**（完整时间线见 §4.5、口径基准 §0.2）。
+项目 2026-08-24 前后完成套件化，8 天内密集发版；2026-08-31 产出 Q4 九周防漂移执行契约（`scope-freeze` / `implementation-plan-dod` / `roadmap-update`），计划 W1–W9（2026-08-31 → 2026-11-02）以海外发布与观测收口。此后 `stats/` 每日快照持续到 2026-11-25，2026-11-11 建立 `knowledge-base/` 共 14 篇派生文档；**工程侧停滞 87 天（2026-08-31 → 2026-11-25），2026-11-26 以 `0.1.7` / `0.1.8` 同日两版恢复**（完整时间线见 §4.5、口径基准 §0.2）。
 
 ## 2. 结论速览
 
@@ -44,7 +44,7 @@ confidence: medium
                     │
 证据（仓库内）      ├─ ✅ D1 健康分、D2 埋点、D3 召回门禁、D4 曝光监控、D7 eval 报告、D12 首周报
                     ├─ 🔄 D5 README-EN（文件在，但人工终审记录缺失）、D6 HN 物料（草稿在）
-                    └─ 仓库内无记录：D8 发布执行、D9/D10/D11 落地文件、W37–W44 周报、v0.1.7、pivot（定义差异见 PR-04 P2-2，属已知问题 / 待办）
+                    └─ 仓库内无记录：D9/D10/D11 落地文件、W37–W44 周报、pivot（D8 的版本侧已于 11-26 落地，但主帖与响应台账仍缺；定义差异见 PR-04 P2-2，属已知问题 / 待办）
 ```
 
 ## 4. 主体内容
@@ -56,7 +56,7 @@ confidence: medium
 | 0.1.0 | 2026-08-24 | 套件化：`serve` 子命令、`channels` 包、6 篇文档；检索改进 P1 别名组 / R1 每词阈值 / R2 覆盖度 ramp / R3 缓存 ~170× / P3 索引过期 / P4 via_link 门槛 / top_k 收紧 4 |
 | 0.1.1 | 2026-08-25 | 15 单测 + 3 召回基线、`check_recall_baseline.py`（0/1/2）、`ci.yml` / `release.yml`、CI/Release 徽章、PyPI 指南 |
 | （0.1.2） | — | **正文无版本段**，仅文末 compare 链接 |
-| 0.1.3 | 2026-08-26 | categories 增量语义、`categories-sync`、`lint --sync-vocab`、eval 双兜底、锚点双段比对（误报 199→24）、qrcode 入 `[serve]`、Py3.14 CI |
+| 0.1.3 | 2026-08-26（**未发版**） | categories 增量语义、`categories-sync`、`lint --sync-vocab`、eval 双兜底、锚点双段比对（误报 199→24）、qrcode 入 `[serve]`、Py3.14 CI。**无 tag、无 PyPI 记录**，只存在于 CHANGELOG 与仓库代码 |
 | 0.1.4 | 2026-08-27 | `eval --seed` / `--demo`、`queries_source`、**取消内置集自动回退**（避免假 100%）、退出码 2/3 与索引优先、**否决 init 生成 T0 种子** |
 | 0.1.5 | 2026-08-27 | 仓库门面化（banner / README.en / CONTRIBUTING / SECURITY / Issue 模板 / pre-commit）、`eval --chart` SVG、飞书 + Telegram 适配器、进化路线图、**`/webui/chat`（P0）/ `/dashboard`（P1）/ `/dashboard/status`**、extras `[wechat]`→`[serve]`（保留别名） |
 | 0.1.6 | 2026-08-31 | **`/api/*` 正式路由**（`/api/chat`、`/api/recall`，旧路径保留别名）、**SSE 流式** `meta→candidates→delta*→done`、WebUI 打字机 + 停止按钮、prompt 加多自然段约束 |
@@ -64,7 +64,7 @@ confidence: medium
 | 0.1.8 | 2026-11-26 | **索引外文件的 Markdown 链接不再判死**（`_exists_exact` 逐级 `listdir` 大小写严格比对 + 拒绝 `..` 逃逸，.md 与非 .md 两类目标统一口径）、`is_vendored` 认 `README.<lang>.md` 等本地化变体 |
 | [Unreleased] | — | 空 |
 
-> 「8 天 7 版」与正文 6 段（0.1.2 无正文、0.1.4 与 0.1.5 同日）属统计口径差异，归类为已知问题 / 待办，引用时须带口径说明。
+> **版本口径**（易混，引用前先读）：`0.1.3` 有正文、有代码，但**从未发版**（无 tag、PyPI 无记录）；`0.1.2` 相反——有 tag 与 PyPI 记录、CHANGELOG 无正文。因此「8 天 7 版」与「正文段数」两个数永远对不上，属统计口径差异（已知问题 / 待办）。截至 2026-11-26：CHANGELOG 八段、PyPI 八个版本、tag 八个（缺 v0.1.3）。
 
 ### 4.2 能力演进路线（L0→L3）
 
@@ -95,7 +95,7 @@ confidence: medium
 | D12 周报制度 | ⚠️ 仅 1 份 | `docs/weekly/2026-W36.md`；W37–W44 周报仓库内无记录，DoD「9 份缺 ≤1」为硬性纪律（已知问题 / 待办） |
 | D5 README-EN | ⚠️ 文件在 | `README.en.md` 完整，但 W36 记录「人工终审未执行（LLM 产物必须人审）」 |
 | D6 HN 物料 | ⚠️ 草稿在 | `hn-post-draft.md` / `llmwiki-vs-rag-comparison.md`；HN 发布（计划 2026-09-22）仓库内无记录 |
-| D8 发布执行 / `v0.1.7` | ⚠️ 延期落地 | 原定 W4（09-22），实际 2026-11-26 发布（tag + PyPI + Release）；配套的 HN 主帖、发布响应台账仍仓库内无记录；`dist/` 停在 0.1.3（陈旧产物为已知问题 PR-04 P4-6） |
+| D8 发布执行 | ⚠️ 版本侧已落地 | 原定 W4（09-22）发 `v0.1.7`，实际 2026-11-26 延期落地（后同日追加 0.1.8），tag + PyPI + GitHub Release 三处齐备；配套的 HN 主帖、发布响应台账仍仓库内无记录 |
 | D9/D10/D11 | 仓库内无落地记录 | 两份计划定义本身不同（PR-04 P2-2，已知问题 / 待办），仓库内无落地文件 |
 | CR 目录 / 发布响应台账 | 仓库内无记录 | `docs/cr/`、`docs/release-response-ledger.md` 仓库内无记录（PR-04 P3-1 / P3-2） |
 
@@ -123,32 +123,33 @@ confidence: medium
 | 2026-11-07 | 回填提交 `c57c718`（CommitDate 12:00），仅改 `docs/hn-account-growth.md` | 当时为 HEAD；不是养号执行记录 |
 | 2026-11-11 | 新建 `knowledge-base/` 14 篇；全仓口径统一 | 口径基准 v1 建立 |
 | 2026-11-12 | 方案 C 重排：知识层 8 篇 + 项目记录 6 篇，编号 `KB-*` / `PR-*` 分离 | 仅文档结构，无代码变更 |
-| 2026-11-26 | 6 个功能 / 修复提交 + `release: 0.1.7`；tag 触发 `release.yml`，PyPI 与 GitHub Release 同日发布 | 工程侧恢复；HN 主帖等仍无记录 |
+| 2026-11-26 | 6 个功能 / 修复提交 + `release: 0.1.7`；tag 触发 `release.yml`，PyPI 与 GitHub Release 同日发布 | 工程侧停滞 87 天后恢复；HN 主帖等仍无记录 |
+| 2026-11-26（下午） | 套件仓自身 lint 归零（25 → 0）、`ci.yml` 增 lint 自检、收录范围收敛到 `docs/`；随后 `release: 0.1.8` 与 tag `v0.1.8` 发布（链接存在性兜底 + vendored 本地化变体） | 与 0.1.7 同日第二版；health 60 → 87 |
 
-> HN 发布（09-22）、W37–W44 周报、`docs/cr/`、发布响应台账、W9 pivot/止损决策、范围冻结签署，仓库内仍无记录；不排除在仓库外发生。原计划 W4 的 `v0.1.7` 已延期落地。权威时间线见口径基准 §0.2。
+> HN 发布（09-22）、W37–W44 周报、`docs/cr/`、发布响应台账、W9 pivot/止损决策、范围冻结签署，仓库内仍无记录；不排除在仓库外发生。原计划 W4 的 `v0.1.7` 已延期落地（同日追加 0.1.8）。权威时间线见口径基准 §0.2。
 
 ## 5. 注意事项与常见误读
 
 1. **不要把「有文档」当「已交付」**：`release-plan.md`、`hn-account-growth.md`、`llmwiki-evolution-roadmap.md` 都是计划/设计稿，不是执行记录。
 2. **`stats/` 的存在不等于计划成功**：它恰好证明了 D4 落地，同时否证了几乎所有外部增长目标。
 3. **W36 周报的 D4「进行中」已过时**：`obs-daily.yml` 与 85 份快照都在，读周报要按日期打折。
-4. **不要按 CHANGELOG 推断 PyPI 现状**：仓库内 `dist/` 是 0.1.3、egg-info 是 0.1.5、pyproject 是 0.1.7、stats 是 v0.1.6；多套版本号并存（PR-02），PyPI 现状须直接查元数据。
+4. **版本号已统一到 `0.1.8`，但 `stats/` 快照仍写 `v0.1.6`**：`pyproject.toml` / `__init__.py` / egg-info / `dist/` / `.venv` editable 五处 2026-11-26 已对齐；`stats/` 的 `version` 字段取自 GitHub Release 抓取，止于 11-25 的快照自然记 v0.1.6，是历史数据不是缺陷（PR-02）。PyPI 现状仍须直接查元数据，别按快照或 CHANGELOG 推断。
 5. **止损线不是失败结论**：它只是决策触发条件；是否 pivot、转向哪个方向仓库内无记录，需主理人判断。
 
 ## 6. 不确定 / 待补充项
 
-- 未联网核验外部 star / 下载量走势；本文趋势结论时间锚点为截至 2026-11-25，仅覆盖仓库内证据（11-11/11-12 文档结构变更、11-26 `0.1.7` 发布已计入）。版本事实已于 2026-11-26 定点核验（PyPI 元数据 + GitHub Release）。
+- 未联网核验外部 star / 下载量走势；本文趋势结论时间锚点为截至 2026-11-25，仅覆盖仓库内证据（11-11/11-12 文档结构变更、11-26 `0.1.7` / `0.1.8` 两次发布已计入）。版本事实已于 2026-11-26 定点核验（PyPI 元数据 + GitHub Release）。
 - HN 养号（karma 1→+49、09-17 终检≥50）、09-22 主帖、发布后 48h 复盘是否发生，**仓库内无任何记录**，可能在仓库外发生（如论坛、邮件），不能断言绝对未执行。
 - `scope-freeze.md` 签署栏空白，仓库内无签署记录；九周计划是否正式启动 / 终止仓库内无决策记录（PR-04 P3-6）。
 - 「Phase 2 Q1–Q10」只是承诺清单，无排期与负责人；`docs/llmwiki-eval-report-v1.md` 把语义召回错标为 Q10（实际 Q1 才是健康分 Pro），需统一编号。
-- 若继续推进，优先补齐的决策：是否 pivot、是否补 v0.1.7、是否重启周报与 CR 机制、是否清理陈旧 `dist/` 与版本号。
+- 若继续推进，优先补齐的决策：是否 pivot、是否重启周报与 CR 机制、HN 主帖是否还发。
 
 ## 7. 主要依据
 
 | 依据 | 具体线索 |
 |---|---|
-| `CHANGELOG.md` | 0.1.0–0.1.7 七段 + 空 [Unreleased]、0.1.2 缺正文 |
-| `pyproject.toml` / `src/llmwiki/__init__.py` | `0.1.7` |
+| `CHANGELOG.md` | 0.1.0–0.1.8 八段 + 空 [Unreleased]、0.1.2 缺正文 |
+| `pyproject.toml` / `src/llmwiki/__init__.py` | `0.1.8` |
 | `docs/llmwiki-evolution-roadmap.md` | L0→L3 分层、新文件与四命令、验收标准 |
 | `docs/scope-freeze.md` | D1–D12、四条决策、W9 止损线、签署状态 |
 | `deliverables/product-strategy/implementation-plan-dod-llmwiki-2026-08-31.md` | DoD、M0–M6、W9 指标总表、Phase 2 Q1–Q10 |

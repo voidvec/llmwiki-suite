@@ -138,12 +138,14 @@ P0 与 P1 的修复互不依赖；P2/P3 属计划体系的历史口径差异与�
 1. `docs/cr/` 目录（C2 变更单要求落盘）——仓库内无记录。
 2. `docs/release-response-ledger.md`（发布后 48h 台账）——仓库内无记录。
 3. `docs/weekly/2026-W37 … W44`（W2–W9 周报）——仓库内仅 W36 一份，W37–W44 仓库内无记录；DoD 把「9 份缺 ≤1」列为硬性指标（已知问题 / 待办）。
-4. ~~`v0.1.7` tag / CHANGELOG 段 / PyPI 版本——仓库内无记录~~ **已于 2026-11-26 全部落地并关闭**：tag `0f4210a`、`CHANGELOG.md [0.1.7]`、PyPI wheel + sdist、GitHub Release `v0.1.7`（快照 `version` 仍记 v0.1.6，因快照取自 Release 字段，见 PR-02）。
+4. ~~`v0.1.7` tag / CHANGELOG 段 / PyPI 版本——仓库内无记录~~ **已于 2026-11-26 全部落地并关闭**：tag `0f4210a`、`CHANGELOG.md [0.1.7]`、PyPI wheel + sdist、GitHub Release `v0.1.7`；同日第二版 `0.1.8`（tag `c2cf4a1` 之后）同样三处齐备（快照 `version` 仍记 v0.1.6，因快照取自 Release 字段且止于 11-25，见 PR-02）。
 5. W9 pivot / 止损决策文档——仓库内无记录（按 `stats/` 数据触发条件成立）。
 6. `scope-freeze.md` 主理人签署——仓库内无签署记录（状态「待签署」、签署栏空白）。
 7. `.kb-lint-ignore.json` 实例——代码与教程都支持，仓库内无记录；且格式是「纯正则串数组」，与「每条需附注释说明来源」的要求无落点。
 8. 「how we measured」复现附录、`llmwiki query` 演示截图 / GIF——`hn-post-draft.md` 与对比文 TODO 仓库内无记录（已知问题 / 待办）。
 9. `assets/qrcode-wechat-placeholder.png` 仍是占位图；`docs/community/discussion-welcome-post.md` 引用 `../assets/...`，从 `docs/community/` 解析到 `docs/assets/`，**链接原失效，已于 2026-11-11 修正为 `../../assets/...`**（实际文件在仓库根 `assets/`）。
+
+10. **`0.1.3` 从未发版（2026-11-26 核实）**：CHANGELOG 有 `[0.1.3]` 正文、仓库有对应代码，但 `git tag` 与 PyPI `releases` 都没有 0.1.3。这不是「仓库内无记录」而是**确实没发布**——它的改动被 0.1.4 覆盖了，补发无意义，只需在引用版本序列时排除（PyPI 实际为 0.1.0/1/2/4/5/6/7/8 共 8 版）。与之相反的是 `0.1.2`：有 tag、有 PyPI 记录，CHANGELOG 却没正文。两个方向的口径缺口都已写进基准 §0.1。
 
 另外：README 两版的「文档」索引分别只列 9 / 11 篇，均未收录 `scope-freeze / release-plan / RELEASE / remote-onboarding / *-verify / eval-seed-design / webui-dashboard-design / hn-* / weekly / community / weekly-report-template` 等 20 篇。
 
@@ -151,12 +153,12 @@ P0 与 P1 的修复互不依赖；P2/P3 属计划体系的历史口径差异与�
 
 | # | 事项 | 现状 |
 |---|---|---|
-| P4-1 | `pytest` 全量结果与干净环境安装 | ✅ 已实跑（2026-11-26）：**68 passed**（本机 .venv + Python 3.13，耗时 32.7s）；CI 四版本矩阵 3.11–3.14 同样全绿。此前记的「42 passed」（CHANGELOG 0.1.5）是 0.1.5 时的数量，测试函数随 `--strict-links` 与 vendored 判定新增到 68 |
+| P4-1 | `pytest` 全量结果与干净环境安装 | ✅ 已实跑（2026-11-26，套件 0.1.8）：**74 passed**（本机 .venv + Python 3.13，耗时 33.7s）；CI 四版本矩阵 3.11–3.14 同样全绿。CHANGELOG 0.1.5 记的「42 passed」是当时的数量，此后 `--strict-links`、vendored 变体、链接存在性判定各自新增用例，累计到 74 |
 | P4-2 | `stats/` 是否由 workflow 逐日真实生成 | 仓库内 2026-09-05~11-25 存在逐日 `obs(daily)` 提交；但 11-06 之前除 09-01（`+0800` 手工）外 65 个 JSON + CSV 的 mtime 全为 2026-11-07 12:00、`fetched_at` 全 `+0000`，且缺 09-02，推测为批量回填（待验证）；11-07 及以后由远端逐日提交补齐 |
 | P4-3 | `open_prs` 口径 | `per_page=1` + `len(pulls)` 恒 0/1，不能作为「无 PR」强证据 |
 | P4-4 | 计划类动作是否在仓库外发生 | HN 发帖、养号、PyPI 上传、CR 评审可能只在站外/本地；仓库内无记录，不能断言绝对未执行 |
 | P4-5 | 新建 `knowledge-base/` 是否应排除出索引 | ✅ **已决策并关闭（2026-11-26）**：不改 `DEFAULT_EXCLUDE_DIRS`（该值对所有用户库生效），改用根 `llmwiki.toml` 的 `[ingest].extra_exclude` 排除 `knowledge-base` / `project-records` / `deliverables` |
-| P4-6 | 陈旧产物清理 | ◐ 部分处理（2026-11-26）：`dist/` 已重新构建为 0.1.8（`build` + `twine check` 双 PASSED，仅本地、仍 gitignore）；**仍待清理**：egg-info 0.1.5、`.venv` editable 元数据指向 0.1.2、`bug_report.yml` placeholder 0.1.1、pypi-guide 全文示例 0.1.0 |
+| P4-6 | 陈旧产物清理 | ✅ **已关闭（2026-11-26）**：`dist/` 重建为 0.1.8（`build` + `twine check` 双 PASSED，仍 gitignore）、egg-info `0.1.8`、`.venv` editable dist-info `0.1.8`（`pip install -e .` 重装）、`bug_report.yml` placeholder `0.1.8`、pypi-guide 示例改 `<version>` 占位（不再写死）。唯一保留的 `v0.1.6` 是 `stats/` 历史快照，不属残留 |
 
 ## 8. 建议的收敛顺序
 
@@ -164,7 +166,7 @@ P0 与 P1 的修复互不依赖；P2/P3 属计划体系的历史口径差异与�
 2. **再修 P0 代码缺陷**（多为小改动：相对导入、返回退出码、全量注入 cfg、占位符、锚点目标）。
 3. **统一口径**：把 `[categories]` 增量语义、`ingest --apply` 自动重建索引、`contextual_recall` 字段名、`[serve]` 命名、`health` 命令补齐到 README / 教程 / TOML 模板。
 4. **冻结或废弃计划体系**：D1–D12 / Wave / M 编号 / 阈值 / Q 编号至少选一套权威来源，其余标注「历史」。
-5. **补决策记录**：pivot 与否、是否补发 v0.1.7、是否重启周报与 CR；这一步是产品决策，不是文档工作。
+5. **补决策记录**：pivot 与否、HN 主帖是否还发、是否重启周报与 CR；这一步是产品决策，不是文档工作。
 
 ## 9. 注意事项
 

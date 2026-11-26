@@ -34,13 +34,13 @@ confidence: medium
 - `MANIFEST.in` 只有 2 行：`include README.md` + `recursive-include docs *.md`；**sdist 不含 scripts/、stats/、.github/、testkb/**。
 - 发布：tag `v*` → `python -m build` → `twine check` → `twine upload --skip-existing`（`secrets.PYPI_API_TOKEN`）→ `softprops/action-gh-release@v3` 自动生成 Release Notes。
 - 观测：`obs-daily.yml` 每日 01:00 UTC 抓 GitHub + PyPI，落 `stats/llmwiki-obs-*.json` 与 `stats/daily-series.csv`，并自动 commit/push。
-- **当前实际状态**：pyproject `0.1.8`；`dist/` 停在 `0.1.3`（陈旧产物，见 P4-6）；egg-info `0.1.5`；stats 全周期 `version = v0.1.6`；`v0.1.7` 与 `v0.1.8` 于 2026-11-26 同日发布（各自 tag、PyPI wheel/sdist、GitHub Release 三处同时落地，推 tag 即触发 `release.yml`）。
+- **当前实际状态**：pyproject `0.1.8`、`__init__.py` `0.1.8`、`dist/` 两个 `0.1.8` 产物、egg-info `Version: 0.1.8`、`.venv` editable dist-info `0.1.8` —— **本机四处已与 PyPI / GitHub Release 的 `0.1.8` 一致**（2026-11-26 对齐，见 PR-04 P4-6）；唯 `stats/` 全周期 `version = v0.1.6` 是历史快照，不再更新。`v0.1.7` 与 `v0.1.8` 于 2026-11-26 同日发布（各自 tag、PyPI wheel/sdist、GitHub Release 三处同时落地，推 tag 即触发 `release.yml`）。
 
 ## 3. 关键关系
 
 ```
 源码 src/llmwiki + data/
-   ├─ python -m build ──> dist/*.whl（31 文件）+ dist/*.tar.gz（含 docs/、tests/）
+   ├─ python -m build ──> dist/*.whl（33 文件）+ dist/*.tar.gz（含 docs/、tests/）
    ├─ tag v* ──> release.yml ──> twine upload ──> PyPI ──> GitHub Release
    └─ pip install ──> 用户库 llmwiki init ──> scaffold（pre-commit + kb-lint.yml）
 
@@ -58,7 +58,10 @@ confidence: medium
 
 `pyproject.toml`：`setuptools>=68`、`version = "0.1.8"`、`readme = README.md`、`license = "MIT"`（PEP 639 SPDX，**不能再加 MIT classifier**，否则 setuptools 报 `InvalidConfigError`）、classifiers 覆盖 Python 3.11–3.14。包数据声明 `data/**/*.{json,toml,md,yaml,yml}` + `data/scaffold/.pre-commit-config.yaml`（其中 `*.toml` 无对应文件，模板是 `cli.py` 内嵌字符串）。
 
-实测 `dist/` 两个 0.1.3 产物：wheel 86,421 B（31 文件：20 个 .py + 5 个 data + dist-info），sdist 125,466 B（含 11 个扁平 docs/*.md、tests 两个 .py、已不存在的 `setup.cfg`）。当前仓库 `docs/` 已改为 `tutorials/`、`community/`、`weekly/` 子目录，**sdist 结构与当前仓库不一致**。
+实测 `dist/` 两个 0.1.8 产物（2026-11-26 重建）：wheel **113,499 B / 33 文件**（22 个 .py + 5 个 data + 6 个 dist-info），sdist **229,785 B / 87 条目**（含 `docs/` 递归 32 篇 md、`tests/` 两个 .py）。两处订正历史结论：
+
+- **`setup.cfg` 不是残留旧配置**：sdist 里的那份由 setuptools 构建时自动生成（仓库根从来没有这个文件），0.1.3 时代把它误读成「已删除的遗留物」。
+- **sdist 结构已与仓库一致**：`MANIFEST.in` 用 `recursive-include docs *.md`，`tutorials/`、`community/`、`weekly/` 子目录一并入包；0.1.3 时「11 篇扁平 docs/*.md」的偏差已随目录重组自然消失。
 
 ### 4.2 发布链路
 
@@ -109,7 +112,8 @@ JSON 顶层：`date / fetched_at / pypi{package,last_day,last_week,last_month,er
 1. **不要按「累计下载」解读 CSV**：`696→534→99` 是滚动窗口与上游数据变化，不是总量下降。
 2. **`open_prs` 不是真实 PR 数**：`fetch_github_stats.py` 用 `per_page=1` 后取 `len(pulls)`，恒为 0 或 1；因此「无外部 PR」的结论应同时用 `open_issues` 与人工核对佐证。
 3. **仓库内 2026-09-05~11-25 存在逐日 `obs(daily)` 提交**，但 11-06 之前的 `stats/` 文件是否由 workflow 真实逐日生成待验证：除 09-01（`fetched_at +0800`、手工运行）外，65 个 JSON 与 CSV 的 mtime 全部为 `2026-11-07 12:00`、`fetched_at` 全为 `+0000`，推测为一次批量回填（待验证）；11-07 及以后的快照由远端逐日提交补齐，mtime 未核验；缺 09-02。
-4. `dist/` 被 `.gitignore` 忽略却留在工作区且停在 0.1.3；本地 `twine check dist/*` 会同时校验新旧产物。
+4. **`dist/` 被 `.gitignore` 忽略却留在工作区**：2026-11-26 已重建为 0.1.8（此前停在 0.1.3）；本地 `twine check dist/*` 会同时校验目录内所有产物，别再往里放旧包。
+5. **版本号有多个落点，`pyproject.toml` 才是唯一真源**：`llmwiki --version` 读 `src/llmwiki/__init__.py` 的 `__version__`，镜像/文档示例另算。改动后要核对四处：pyproject、`__init__`、egg-info、`.venv` 的 editable dist-info（后两者由 `python -m build` / `pip install -e .` 生成，不手改）。
 5. `httpx2>=2.0` 是**真实存在的包**（本地 `.venv` 为 2.12.0，pydantic 发布的 httpx 后继），不是笔误；但其默认不注册 `httpx` 模块别名，需实测干净环境（PR-04）。
 6. `scaffold/kb-lint.yml` 的 `pip install git+https://github.com/<you>/llmwiki-suite.git` 含未替换占位符；用户 `init` 后该 CI 必失败。
 7. `fetch_pypi_stats.py` docstring 的 `--since/--days` 未实现，数据源写成 `/overview`（实际 `/overall`）；`make_repo_banners.py` docstring 写 `demo-usage.png 1400x760`（实际 `demo-term.png 1360x800`）。
@@ -127,8 +131,8 @@ JSON 顶层：`date / fetched_at / pypi{package,last_day,last_week,last_month,er
 | 依据 | 具体线索 |
 |---|---|
 | `pyproject.toml` / `MANIFEST.in` / `LICENSE` / `.mailmap` | 元数据、extras、包数据、作者 |
-| `dist/llmwiki_suite-0.1.3.*` | wheel 31 文件 / sdist 结构（实测） |
-| `src/llmwiki_suite.egg-info/PKG-INFO` | `Version: 0.1.5` |
+| `dist/llmwiki_suite-0.1.8.*` | wheel 33 文件 / sdist 87 条目（2026-11-26 实测） |
+| `src/llmwiki_suite.egg-info/PKG-INFO` | `Version: 0.1.8` |
 | `.github/workflows/{ci,release,obs-daily}.yml` | 构建校验、tag 发布、cron `"0 1 * * *"` 与提交脚本 |
 | `scripts/*.py` 六个 | 参数、API、限流、退出码 |
 | `stats/daily-series.csv`、`stats/llmwiki-obs-2026-09-01.json` … `2026-11-25.json` | 字段口径、85 天数值、降级标记、mtime 痕迹 |

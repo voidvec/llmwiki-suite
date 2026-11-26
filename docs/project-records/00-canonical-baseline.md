@@ -28,7 +28,9 @@ last_verified: 2026-11-26
 | CLI 子命令 | **9** 个：`init / ingest / index / query / lint / categories-sync / eval / health / serve` | `src/llmwiki/cli.py` 的 `build_parser()` |
 | 观测快照 | `stats/` 85 份，覆盖 2026-09-01 ~ 2026-11-25（缺 09-02），`obs(daily)` 仍在继续 | `stats/`、`git log` 的 `obs(daily)` 提交 |
 | 周报 | 仅 `docs/weekly/2026-W36.md` 一份 | `docs/weekly/` |
-| 最新提交 | `release: 0.1.8`（tag 指向它）；同日更早是 `release: 0.1.7` 与其后的 5 个修复 / 文档提交 | `git show HEAD` |
+| 版本 tag | `v0.1.8 → c2cf4a1`（`release: 0.1.8`）、`v0.1.7 → 0f4210a`；tag 之后的提交只改文档，不影响版本 | `git tag --format='%(refname:short) %(objectname:short)'`、`git rev-parse v0.1.8^{commit}` |
+| 版本号落点 | 四处必须一致：`pyproject.toml`（**唯一真源**）、`src/llmwiki/__init__.py`（`llmwiki --version` 读它）、`CHANGELOG.md` 段、tag + PyPI + GitHub Release。本机另有两处**生成物**：`src/*.egg-info`（`python -m build` 产）与 `.venv` 的 editable dist-info（`pip install -e .` 产），不手改 | 2026-11-26 已全部对齐 `0.1.8`；`stats/` 快照的 `version` 是历史抓取值（止于 11-25 的 `v0.1.6`），不属对齐范围 |
+| 未发布过的版本段 | **`0.1.3` 只有 CHANGELOG 正文与代码变更，无 tag、无 PyPI 记录**（PyPI 发布序列为 0.1.0 / 0.1.1 / 0.1.2 / 0.1.4 / 0.1.5 / 0.1.6 / 0.1.7 / 0.1.8）；与之相对 `0.1.2` 有 tag 与 PyPI 记录但 CHANGELOG 无正文 | `git tag --list`、`pypi.org/pypi/llmwiki-suite/json` 的 `releases` 键 |
 | 09-05 ~ 11-25 提交 | 除 2026-11-26 的功能 / 发布提交外，全部为 `obs(daily): 曝光快照` | `git log` |
 | 文档结构 | 2026-11-11 建立 14 个文件（1 导航 + 13 篇主题文档）并完成全仓口径统一；**2026-11-12 按方案 C 重排为知识层 8 篇 + 1 导航（`knowledge-base/`，9 个文件）与项目记录 6 篇 + 1 导航（`docs/project-records/`，7 个文件，含 1 份权威基准）；同日完成连续重编号** | `knowledge-base/README.md`、`docs/project-records/README.md` |
 
@@ -36,7 +38,7 @@ last_verified: 2026-11-26
 
 | 日期 | 仓库内证据 | 说明 |
 |---|---|---|
-| 2026-08-31 | 0.1.6 发布；Q4 九周计划三份交付物 | 此后工程侧长期停滞，直到 2026-11-26 的 0.1.7 |
+| 2026-08-31 | 0.1.6 发布；Q4 九周计划三份交付物 | 此后工程侧长期停滞，直到 2026-11-26 的 0.1.7 / 0.1.8 |
 | 2026-09-01 | `docs/weekly/2026-W36.md`（唯一周报）；`stats/` 首份快照 | 计划 W1 |
 | 2026-09-02 | `docs/hn-account-growth.md` 养号计划 K=1 重排（正文 AuthorDate） | 不是提交日 |
 | 2026-09-05 ~ 11-25 | 逐日 `obs(daily): 曝光快照` 提交 + `stats/` 85 份快照 | 唯一的持续仓库活动 |
@@ -54,7 +56,7 @@ last_verified: 2026-11-26
 
 | 主题 | 必须这样写 | 禁止 / 说明 |
 |---|---|---|
-| 计划产物 | 「仓库内无记录」（HN 发布 09-22、W37–W44 周报、`docs/cr/`、发布响应台账、pivot/止损决策、范围冻结签署、L1+ 命令） | 「确定未执行」「已放弃」「不存在」；仓库内无记录 ≠ 未执行。`v0.1.7` 已于 2026-11-26 发布，不再属于此类 |
+| 计划产物 | 「仓库内无记录」（HN 发布 09-22、W37–W44 周报、`docs/cr/`、发布响应台账、pivot/止损决策、范围冻结签署、L1+ 命令） | 「确定未执行」「已放弃」「不存在」；仓库内无记录 ≠ 未执行。`v0.1.7` / `v0.1.8` 已于 2026-11-26 发布，不再属于此类 |
 | 索引刷新 | `ingest --apply` 自动重建；`llmwiki index` 手动重建；`query` / `recall` 不自动重建、只做新鲜度告警 | 笼统的「索引不自动刷新」 |
 | 配置节名 | `[serve]`；`[wechat]` 仅为 0.1.5 前的兼容别名 | 新文档用 `[wechat]` |
 | 评估指标字段 | `summary.contextual_recall` 与 `summary.mrr`（两者并存，后者是真实字段） | `summary['recall']` |

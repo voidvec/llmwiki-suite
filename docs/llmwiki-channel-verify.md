@@ -1,3 +1,13 @@
+---
+title: "飞书 / Telegram 通道 · 本地验证手册"
+description: "不依赖真实消息的通道自检：用 curl 模拟平台回调，逐步确认飞书（Feishu）与 Telegram 通道在本机 serve 中正确接通。"
+categories: ['工具指南', '参考手册']
+tags: [feishu, telegram, channel, curl, verification, serve]
+difficulty: "intermediate"
+created: "2026-08-26"
+updated: "2026-08-27"
+---
+
 # 飞书 / Telegram 通道 · 本地验证手册
 
 > 只讲**本机验证**：不依赖真实消息，用 `curl` 模拟平台回调，即可确认

@@ -1,3 +1,13 @@
+---
+title: "曝光监控（D4）：stats 快照与降级口径"
+description: "作者侧观测的采集契约：每日抓取 PyPI 下载与 GitHub 指标的字段口径、幂等覆盖、429 降级仍退出 0、周报取 CSV 最近 7 行的规则。"
+categories: ['发布运营', '工具指南']
+tags: [llmwiki, observability, stats, pypi, github, d4]
+difficulty: "intermediate"
+created: "2026-09-01"
+updated: "2026-09-01"
+---
+
 # llmwiki-suite 曝光监控（Observability, D4）
 
 > 实施合同 D4 · W1 交付 · 作者侧观测（作者可见的公开指标，非用户行为追踪）

@@ -1,8 +1,9 @@
 ---
 title: "HN 养号作战计划（W2-W3 · 主线 C）"
 description: "W4 发布前 HN 主账号养号：目标门槛、20 天时间线、选帖方向、高质量评论公式、红线与验收检查点。"
-categories: ['发布运营', '运营']
+categories: ['发布运营']
 tags: [hackernews, account, growth, w3, d8]
+difficulty: "intermediate"
 created: "2026-09-02"
 updated: "2026-09-02"
 ---

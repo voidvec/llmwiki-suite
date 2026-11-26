@@ -1,3 +1,13 @@
+---
+title: "llmwiki health 命令参考：0-100 健康分"
+description: "把知识库健康度压成单一分数与分项（完整性 / 链接 / 新鲜度）的参考文档，含权重、JSON 与 HTML 输出、与 lint 的分工（不阻断）。"
+categories: ['参考手册', '工具指南']
+tags: [llmwiki, health, score, cli, reference, ci]
+difficulty: "intermediate"
+created: "2026-08-31"
+updated: "2026-08-31"
+---
+
 # llmwiki health — 健康分（0-100）参考
 
 > 状态：**经验版 Beta**（v0.1）— 定性「健康度参考值」，非质量标准。

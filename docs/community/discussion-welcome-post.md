@@ -1,3 +1,13 @@
+---
+title: "社区欢迎帖：llmwiki-suite 是什么、从哪开始"
+description: "GitHub Discussions 欢迎帖草稿：一句话定位（编译而非临时切片）、快速开始三步、可问的问题与可提的 issue 类型。"
+categories: ['发布运营']
+tags: [community, discussion, onboarding, welcome, github]
+difficulty: "beginner"
+created: "2026-08-27"
+updated: "2026-08-27"
+---
+
 # 👋 欢迎来到 llmwiki-suite 社区
 
 这里是把 **纯 Markdown 笔记「编译」成会问答的个人知识库** 的项目。

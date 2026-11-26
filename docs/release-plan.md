@@ -1,3 +1,13 @@
+---
+title: "W4 发布执行预案（硬发布 Checklist）"
+description: "2026-09-01 草拟的 W4 硬发布执行预案：发布前检查项、主帖与渠道顺序、值守节奏、回滚与失败判据；Checklist 全部为待办，不是执行记录。"
+categories: ['发布运营']
+tags: [llmwiki, release, w4, hn, checklist, plan]
+difficulty: "intermediate"
+created: "2026-09-01"
+updated: "2026-09-02"
+---
+
 # llmwiki-suite 发布执行预案（W4 · 硬发布）
 
 > **状态标注（截至 2026-11-26）· [未兑现]**

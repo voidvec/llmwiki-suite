@@ -1,3 +1,13 @@
+---
+title: "在另一台机器 / 别人的仓库上接入套件"
+description: "把任意 Markdown 笔记目录变成可检索、可问答、可自维护知识库的最小步骤：前提、安装、配置、首次 ingest 与自检，全程与套件仓库零耦合。"
+categories: ['工具指南']
+tags: [llmwiki, onboarding, install, remote, setup, ci]
+difficulty: "beginner"
+created: "2026-08-25"
+updated: "2026-08-31"
+---
+
 # 另一台电脑 / 别人的知识库：接入 llmwiki-suite
 
 > 目标：**在任意新机器上，把别人的 Markdown 笔记目录变成可检索、可问答、可自维护的知识库**，全程与套件零耦合、无需拷贝旧引擎。

@@ -1,3 +1,13 @@
+---
+title: "知识库重建流程：可删产物与用户资产的分界"
+description: "哪些文件是可再生成的产物（索引、评估报告、缓存）、哪些是绝不能删的用户资产（llmwiki.toml / eval_queries.json / 笔记原文），以及在别的机器上重建的步骤。"
+categories: ['工具指南']
+tags: [llmwiki, rebuild, index, operations, verify, assets]
+difficulty: "beginner"
+created: "2026-08-27"
+updated: "2026-08-27"
+---
+
 # LLMWiki 知识库重建流程
 
 ## 用户资产说明

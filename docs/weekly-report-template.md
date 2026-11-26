@@ -1,3 +1,13 @@
+---
+title: "周报模板（D12 · 防漂移）"
+description: "每周固定「周二 PT」锚点的周报骨架：进度 vs 计划、DoD 未达项、外部信号、未批准范围、下周三个 top 待办，缺栏即视为未完成。"
+categories: ['运营周报']
+tags: [llmwiki, weekly, template, d12, process]
+difficulty: "beginner"
+created: "2026-09-01"
+updated: "2026-09-01"
+---
+
 # llmwiki-suite 周报模板（D12 · 防漂移）
 
 > 节奏：**每周 1 次 · 固定「周二 PT」时间锚点** · 每份周报必须包含以下全部栏目，否则视为未完成。

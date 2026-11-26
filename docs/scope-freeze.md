@@ -1,3 +1,13 @@
+---
+title: "M0 范围冻结公告（Non-Goals）"
+description: "2026-09-01 的 M0 范围冻结公告：冻结项、Non-Goals（不做中文物料 / README 只英文 / iLink 后置 Wave 3）、变更走审批的口径；状态仍为「待主理人签署」。"
+categories: ['发布运营']
+tags: [llmwiki, scope-freeze, m0, non-goals, governance]
+difficulty: "beginner"
+created: "2026-09-01"
+updated: "2026-09-01"
+---
+
 # llmwiki-suite 范围冻结公告（M0）
 
 > **状态标注（截至 2026-11-26）· [未兑现]**

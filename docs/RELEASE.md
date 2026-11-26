@@ -1,7 +1,11 @@
 ---
 title: "发布检查清单（Pre-Release Checklist）"
 description: "llmwiki-suite 发布 PyPI 前的核名、构建、安装链路验证记录（M6 后半）"
+categories: ['工具指南', '发布运营']
+tags: [release, pypi, build, twine, checklist, verify]
+difficulty: "intermediate"
 created: "2026-08-24"
+updated: "2026-08-27"
 status: "checklist"
 ---
 

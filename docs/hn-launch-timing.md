@@ -1,8 +1,9 @@
 ---
 title: "HN 发布时机探测小结（W2 · 主线 C）"
 description: "Hacker News Show HN 发布规则复核：账号门槛、最佳窗口、标题公式、首评与值守节奏 —— 校准 W4 发布执行。"
-categories: ['发布运营', '运营']
+categories: ['发布运营']
 tags: [hackernews, show-hn, launch, timing, w4]
+difficulty: "intermediate"
 created: "2026-09-01"
 updated: "2026-09-01"
 ---

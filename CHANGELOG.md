@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### 修复
+- **`is_vendored` 认本地化变体**：除 `README.md` / `CHANGELOG.md` 等精确名，还认
+  `README.en.md` / `README.zh-CN.md` / `CHANGELOG.zh.md`（语言标记 `xx` 或
+  `xx-YY`）。此前双语仓库的英文 README 会被当成「缺 frontmatter 的笔记」永久报
+  `fm.missing`，而补 frontmatter 又是错的方向（仓库元数据不该进召回），只能靠
+  排除——所以判定必须覆盖变体。`readme-linux.md`、`readme.api.md` 这类真笔记不受影响。
+
 ## [0.1.7] - 2026-11-26
 
 ### 新增

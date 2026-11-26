@@ -57,6 +57,30 @@ class TestParseFm:
         assert body == "# just body"
 
 
+class TestIsVendored:
+    """vendored 判定：仓库元数据（含本地化变体）不该被当成缺 frontmatter 的笔记。"""
+
+    @pytest.mark.parametrize("rel", [
+        "README.md", "CHANGELOG.md", "docs/contributing.md",
+        # 本地化变体：双语仓库的正体镜像
+        "README.en.md", "README.zh-CN.md", "README.zh_CN.md", "docs/README.ja.md",
+        "CHANGELOG.zh.md", "SECURITY.zh-TW.md",
+    ])
+    def test_vendored(self, rel):
+        assert kb_core.is_vendored(rel) is True
+
+    @pytest.mark.parametrize("rel", [
+        "notes/readme-linux.md",     # 名字里带 readme，但是真笔记
+        "notes/readme.api.md",       # 第二段不是语言标记
+        "README.en.txt",             # 非 md
+        "my.readme.en.md",           # 前段不是元数据名
+        "docs/RELEASE.md",
+        "messy-note-未归一.md",
+    ])
+    def test_not_vendored(self, rel):
+        assert kb_core.is_vendored(rel) is False
+
+
 # ---- resolve_repo（D3 解析链）----
 
 def _make_kb(tmp_path: Path) -> Path:

@@ -386,10 +386,26 @@ def sha256_text(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+_VENDORED_STEMS = {
+    "changelog", "claude", "contributing", "license", "readme",
+    "code_of_conduct", "code-of-conduct", "security",
+}
+_LOCALE_TAG_RE = re.compile(r"^[a-z]{2}(?:[-_][a-z]{2,4})?$")
+
+
 def is_vendored(rel):
-    """vendored 仓库元数据（无 KB frontmatter）：巡检时排除 FM 缺失误报，也不注入相关文档。"""
+    """vendored 仓库元数据（无 KB frontmatter）：巡检时排除 FM 缺失误报，也不注入相关文档。
+
+    除精确文件名外还认本地化变体（`README.en.md` / `README.zh-CN.md` /
+    `CHANGELOG.zh.md`）：它们与正体同为仓库元数据。只按精确名判会让任何双语仓库
+    永久报 `fm.missing`——而补 frontmatter 恰恰是错的方向（元数据不该进召回），
+    只能靠排除，所以判定必须覆盖变体。
+    """
     base = os.path.basename(rel).lower()
-    return base in {
-        "changelog.md", "claude.md", "contributing.md", "license.md", "readme.md",
-        "code_of_conduct.md", "security.md",
-    }
+    if base in {s + ".md" for s in _VENDORED_STEMS}:
+        return True
+    stem, _, ext = base.rpartition(".")
+    if ext != "md":
+        return False
+    head, sep, tag = stem.rpartition(".")
+    return bool(sep) and _LOCALE_TAG_RE.match(tag) is not None and head in _VENDORED_STEMS

@@ -67,6 +67,8 @@ pre-commit（本地）：check-yaml / whitespace / eof + kb-recall-baseline
 
 链接判死复用 `kb_core` 的归一四铁律；外链跳过（交 lychee 等外部工具，lychee 不认 wikilink）；`.kb-lint-ignore.json` 用正则匹配 `"<rel> :: <detail>"` 隔离历史断链。`--staged` 取 `git diff --cached --name-only --diff-filter=ACMR`；`--sync-vocab` 把索引派生词表并入本次校验（不持久化）。
 
+**vendored 判定**（`kb_core.is_vendored`）覆盖本地化变体：`README.md` / `CHANGELOG.md` / `CONTRIBUTING.md` / `LICENSE.md` / `SECURITY.md` / `CLAUDE.md` / `CODE_OF_CONDUCT.md` 及其 `.<lang>.md` 形式（`README.en.md`、`README.zh-CN.md`、`CHANGELOG.zh.md`，语言标记为两位字母或 `xx-YY`）。这些文件不参与 FM 校验、不计入 health 完整性分母、不注入召回；`readme-linux.md` 这类"名字像但实为笔记"的文件不受影响。
+
 ### 4.2 eval 四态退出码（`eval_recall.py`）
 
 来源优先级：`--demo`（内置集，与你的库无关）→ `--seed`（从索引采样 ≤20 条，写入 `<repo>/eval_queries.json`）→ `--queries` / 默认 `<repo>/eval_queries.json`。

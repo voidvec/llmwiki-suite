@@ -5,7 +5,17 @@
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-26
+
 ### 修复
+- **Markdown 链接不再把「索引外的文件」判死**：索引是磁盘的**子集**——`[ingest].extra_exclude`
+  会把成篇文档排除出索引（如 `knowledge-base/`、`deliverables/`），这类目标在 GitHub /
+  Obsidian 里点得开，此前却报 `link.md.dead`。现在 `.md` 分支在索引未命中时按磁盘存在性
+  兜底，与既有的「非 `.md` 目标按磁盘存在性判定」同一口径。
+  兜底使用逐级 `listdir` 的**大小写严格比对**，不用 `os.path.exists`：Windows / macOS
+  文件系统大小写不敏感，`README.EN.md` 这类写法会在本地「存在」、到 CI 的 Linux 上不存在，
+  同一提交两种结论；而 git 与 GitHub 渲染都是大小写敏感的，严格比对才是正确语义。
+  实测本仓库：health 链接分 94 → 100，总分 85 → 87（新鲜度不变）。
 - **`is_vendored` 认本地化变体**：除 `README.md` / `CHANGELOG.md` 等精确名，还认
   `README.en.md` / `README.zh-CN.md` / `CHANGELOG.zh.md`（语言标记 `xx` 或
   `xx-YY`）。此前双语仓库的英文 README 会被当成「缺 frontmatter 的笔记」永久报

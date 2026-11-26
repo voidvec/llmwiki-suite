@@ -34,7 +34,7 @@ confidence: medium
 - `MANIFEST.in` 只有 2 行：`include README.md` + `recursive-include docs *.md`；**sdist 不含 scripts/、stats/、.github/、testkb/**。
 - 发布：tag `v*` → `python -m build` → `twine check` → `twine upload --skip-existing`（`secrets.PYPI_API_TOKEN`）→ `softprops/action-gh-release@v3` 自动生成 Release Notes。
 - 观测：`obs-daily.yml` 每日 01:00 UTC 抓 GitHub + PyPI，落 `stats/llmwiki-obs-*.json` 与 `stats/daily-series.csv`，并自动 commit/push。
-- **当前实际状态**：pyproject `0.1.7`；`dist/` 停在 `0.1.3`；egg-info `0.1.5`；stats 全周期 `version = v0.1.6`；`v0.1.7` 已于 2026-11-26 发布（tag `0f4210a`、PyPI wheel/sdist、GitHub Release），三处同时落地（PR-03 / PR-04 P3-4）。
+- **当前实际状态**：pyproject `0.1.8`；`dist/` 停在 `0.1.3`（陈旧产物，见 P4-6）；egg-info `0.1.5`；stats 全周期 `version = v0.1.6`；`v0.1.7` 与 `v0.1.8` 于 2026-11-26 同日发布（各自 tag、PyPI wheel/sdist、GitHub Release 三处同时落地，推 tag 即触发 `release.yml`）。
 
 ## 3. 关键关系
 
@@ -56,7 +56,7 @@ confidence: medium
 
 ### 4.1 包元数据与产物
 
-`pyproject.toml`：`setuptools>=68`、`version = "0.1.7"`、`readme = README.md`、`license = "MIT"`（PEP 639 SPDX，**不能再加 MIT classifier**，否则 setuptools 报 `InvalidConfigError`）、classifiers 覆盖 Python 3.11–3.14。包数据声明 `data/**/*.{json,toml,md,yaml,yml}` + `data/scaffold/.pre-commit-config.yaml`（其中 `*.toml` 无对应文件，模板是 `cli.py` 内嵌字符串）。
+`pyproject.toml`：`setuptools>=68`、`version = "0.1.8"`、`readme = README.md`、`license = "MIT"`（PEP 639 SPDX，**不能再加 MIT classifier**，否则 setuptools 报 `InvalidConfigError`）、classifiers 覆盖 Python 3.11–3.14。包数据声明 `data/**/*.{json,toml,md,yaml,yml}` + `data/scaffold/.pre-commit-config.yaml`（其中 `*.toml` 无对应文件，模板是 `cli.py` 内嵌字符串）。
 
 实测 `dist/` 两个 0.1.3 产物：wheel 86,421 B（31 文件：20 个 .py + 5 个 data + dist-info），sdist 125,466 B（含 11 个扁平 docs/*.md、tests 两个 .py、已不存在的 `setup.cfg`）。当前仓库 `docs/` 已改为 `tutorials/`、`community/`、`weekly/` 子目录，**sdist 结构与当前仓库不一致**。
 

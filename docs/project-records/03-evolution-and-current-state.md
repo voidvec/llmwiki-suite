@@ -1,6 +1,6 @@
 ---
 title: 演进历程与当前项目状态
-description: 0.1.0 至 0.1.7 版本时间线、L0 到 L3 路线与项目现状快照
+description: 0.1.0 至 0.1.8 版本时间线、L0 到 L3 路线与项目现状快照
 tags: ["演进", "版本", "现状"]
 difficulty: beginner
 categories: ["参考手册"]
@@ -29,7 +29,7 @@ confidence: medium
 
 ## 2. 结论速览
 
-- **代码侧 2026-08-31 定格于 `0.1.6`，停滞 87 天后于 2026-11-26 发出 `0.1.7`**：0.1.7 含严格链接口径、CommonMark 围栏修正、检索章节稀有度加权、`gh_slug` 对齐、health 完整性分母修正；`[Unreleased]` 已清空，`pyproject.toml` / `__init__.py` / PyPI / Release 均为 0.1.7。
+- **代码侧 2026-08-31 定格于 `0.1.6`，停滞 87 天后于 2026-11-26 连发 `0.1.7` / `0.1.8`**：0.1.7 含严格链接口径、CommonMark 围栏修正、检索章节稀有度加权、`gh_slug` 对齐、health 完整性分母修正；0.1.8 修「索引外文件的 md 链接被判死」与「双语仓库 `README.<lang>.md` 被判缺 frontmatter」。`[Unreleased]` 已清空，`pyproject.toml` / `__init__.py` / PyPI / Release 均为 0.1.8。
 - **工程能力基本完整**：9 命令、BM25+wikilink 召回、lint/eval/health、4 通道、WebUI/Dashboard、SSE、CI/pre-commit 门禁、PyPI 发布链均已落地。
 - **产品化计划仍大面积未落地**：HN 发布（计划 2026-09-22）、W37–W44 周报、`docs/cr/`、发布响应台账、pivot / 止损决策、范围冻结签署，仓库内仍无记录（原计划 W4 的 `v0.1.7` 已于 2026-11-26 延期落地，但无配套发布动作）。
 - **观测数据连续 85 天为零外部信号**：stars / forks / open_issues / open_prs 全程 0，`version` 恒为 `v0.1.6`（快照取自 GitHub Release），PyPI 月滚动下载从 569 峰值 696 回落并稳定在 94。
@@ -61,6 +61,7 @@ confidence: medium
 | 0.1.5 | 2026-08-27 | 仓库门面化（banner / README.en / CONTRIBUTING / SECURITY / Issue 模板 / pre-commit）、`eval --chart` SVG、飞书 + Telegram 适配器、进化路线图、**`/webui/chat`（P0）/ `/dashboard`（P1）/ `/dashboard/status`**、extras `[wechat]`→`[serve]`（保留别名） |
 | 0.1.6 | 2026-08-31 | **`/api/*` 正式路由**（`/api/chat`、`/api/recall`，旧路径保留别名）、**SSE 流式** `meta→candidates→delta*→done`、WebUI 打字机 + 停止按钮、prompt 加多自然段约束 |
 | 0.1.7 | 2026-11-26 | **`lint --strict-links`** 严格链接口径、CommonMark 围栏与行内码解析修正、检索章节按标题稀有度加权 + 上下文剥离 frontmatter/`<cite>`、`gh_slug` 对齐 GitHub、health 完整性分母剔除 vendored、BM25 排除 `kind: nav-index` 导航页 |
+| 0.1.8 | 2026-11-26 | **索引外文件的 Markdown 链接不再判死**（`_exists_exact` 逐级 `listdir` 大小写严格比对 + 拒绝 `..` 逃逸，.md 与非 .md 两类目标统一口径）、`is_vendored` 认 `README.<lang>.md` 等本地化变体 |
 | [Unreleased] | — | 空 |
 
 > 「8 天 7 版」与正文 6 段（0.1.2 无正文、0.1.4 与 0.1.5 同日）属统计口径差异，归类为已知问题 / 待办，引用时须带口径说明。

@@ -22,14 +22,14 @@ last_verified: 2026-11-26
 
 | 项 | 权威值 | 取证位置 |
 |---|---|---|
-| 当前版本 | `0.1.7`，发布日 2026-11-26 | `pyproject.toml:7`、`src/llmwiki/__init__.py:3`、`CHANGELOG.md` `[0.1.7] - 2026-11-26`、PyPI 元数据、GitHub Release `v0.1.7` |
-| 待发布段 | `[Unreleased]` 为空；`v0.1.7` 已发布：tag `v0.1.7`（`0f4210a`）+ PyPI wheel/sdist（2026-11-26 10:57 CST）+ GitHub Release | `CHANGELOG.md`、`git tag`、`gh release list`、`pypi.org/pypi/llmwiki-suite/json` |
-| 工程侧最后功能变更 | 0.1.7（2026-11-26）：`lint --strict-links`、CommonMark 围栏修正、检索章节稀有度加权、`gh_slug` 对齐、health 完整性分母修正 | `git log`、`src/llmwiki/` |
+| 当前版本 | `0.1.8`，发布日 2026-11-26 | `pyproject.toml:7`、`src/llmwiki/__init__.py:3`、`CHANGELOG.md` `[0.1.8] - 2026-11-26`、PyPI 元数据、GitHub Release `v0.1.8` |
+| 待发布段 | `[Unreleased]` 为空；`v0.1.7` 与 `v0.1.8` 同日发布：tag + PyPI wheel/sdist + GitHub Release（0.1.7 于 10:57 CST，0.1.8 于 12:0x CST） | `CHANGELOG.md`、`git tag`、`gh release list`、`pypi.org/pypi/llmwiki-suite/json` |
+| 工程侧最后功能变更 | 0.1.8（2026-11-26）：Markdown 链接对「索引外文件」不再判死（大小写严格 + 拒绝 `..` 逃逸的存在性兜底）、`is_vendored` 认 `README.<lang>.md` 等本地化变体 | `git log`、`src/llmwiki/kb_core.py` |
 | CLI 子命令 | **9** 个：`init / ingest / index / query / lint / categories-sync / eval / health / serve` | `src/llmwiki/cli.py` 的 `build_parser()` |
 | 观测快照 | `stats/` 85 份，覆盖 2026-09-01 ~ 2026-11-25（缺 09-02），`obs(daily)` 仍在继续 | `stats/`、`git log` 的 `obs(daily)` 提交 |
 | 周报 | 仅 `docs/weekly/2026-W36.md` 一份 | `docs/weekly/` |
-| 最新提交 | `0f4210a`（`release: 0.1.7`），其前 6 个提交为严格链接口径与检索/锚点/健康度修复 | `git show HEAD` |
-| 09-05 ~ 11-25 提交 | 除 0.1.7 的 7 个功能 / 发布提交外，全部为 `obs(daily): 曝光快照` | `git log` |
+| 最新提交 | `release: 0.1.8`（tag 指向它）；同日更早是 `release: 0.1.7` 与其后的 5 个修复 / 文档提交 | `git show HEAD` |
+| 09-05 ~ 11-25 提交 | 除 2026-11-26 的功能 / 发布提交外，全部为 `obs(daily): 曝光快照` | `git log` |
 | 文档结构 | 2026-11-11 建立 14 个文件（1 导航 + 13 篇主题文档）并完成全仓口径统一；**2026-11-12 按方案 C 重排为知识层 8 篇 + 1 导航（`knowledge-base/`，9 个文件）与项目记录 6 篇 + 1 导航（`docs/project-records/`，7 个文件，含 1 份权威基准）；同日完成连续重编号** | `knowledge-base/README.md`、`docs/project-records/README.md` |
 
 ## 0.2 最新进展时间线（唯一权威版本）
@@ -46,6 +46,7 @@ last_verified: 2026-11-26
 | 2026-11-12 | 方案 C 落地：`knowledge-base/` 收敛为 8 篇知识文档 + 1 份导航；5 篇治理 / 状态 / 台账 / 索引迁至 `docs/project-records/`，权威基准从原导航 §0 独立成篇（该目录共 6 篇 + 1 导航） | 仅文档结构调整，无代码变更 |
 | 2026-11-12 | 按用户纠正完成重编号：知识层 `KB-01` ~ `KB-08` 连续且与文件名一致，项目记录改用独立 `PR-00` ~ `PR-05`；全仓引用一次性同步，旧号存于 `legacy_kb_id` | 修正上一轮的跳号与同号歧义；v1 口径不变，仅补记结构变更 |
 | 2026-11-26 | 6 个功能 / 修复提交 + `release: 0.1.7`；推 tag 触发 `release.yml`，PyPI 与 GitHub Release 同日发布（`0f4210a`） | 工程侧停滞 87 天后恢复 |
+| 2026-11-26（下午） | 套件仓自身 lint 归零（25 → 0：`is_vendored` 认本地化变体、`deliverables/` 退出索引、13 份文档补 frontmatter）、`ci.yml` 增 lint 自检 job、文档收录范围收紧到 `docs/`；随后 `release: 0.1.8` 发 **0.1.8**（链接存在性兜底 + vendored 变体） | 与 0.1.7 同日第二版；health 60 → 87 |
 
 > 计划中的 W4（09-22）发布 `v0.1.7` + HN 主帖、W37–W44 周报、`docs/cr/`、发布响应台账、W9 pivot/止损决策、范围冻结签署：其中 `v0.1.7` 已于 2026-11-26 落地（延期 65 天，含 PyPI 与 GitHub Release），**其余各项仓库内仍无记录**；不排除在仓库外发生，不作绝对断言。时间线展开对照见 `docs/project-records/03-evolution-and-current-state.md §4.5`。
 
@@ -60,7 +61,7 @@ last_verified: 2026-11-26
 | 词表语义 | `[categories].allowed` 增量追加，`replace_default = true` 才整体替换 | 「整体替换默认」 |
 | 门禁阈值 | 执行口径 0.95 / 0.90（代码 / CI / pre-commit）；0.85 / 0.80 仅作历史计划口径并显式标注 | 两套混用不标注 |
 | 命令数 | 9 个子命令（含 `health`） | 「CLI 8 命令」 |
-| 时间锚点 | 「截至 2026-11-26」（0.1.7 发布后）；历史结论保留其原锚点「截至 2026-11-11 / 11-12」并标注 | 无锚点的「当前 / 最新」 |
+| 时间锚点 | 「截至 2026-11-26」（0.1.8 发布后）；历史结论保留其原锚点「截至 2026-11-11 / 11-12」并标注 | 无锚点的「当前 / 最新」 |
 | 文档结构 | 知识层 8 篇（`KB-01` ~ `KB-08` 连续）+ 项目记录 6 篇（`PR-00` ~ `PR-05`）；两套编号空间分离，旧号仅作 `legacy_kb_id` 与映射表 | 「14 篇知识库文档」「知识库共 13 篇」「编号沿用原始序号」等旧口径 |
 | 问题记录 | 归为「已知问题 / 待办」，见 `docs/project-records/04-known-deviations-and-open-items.md`；未经实跑一律标「待验证 / 推测」 | 粉饰或删除 |
 
@@ -73,6 +74,8 @@ last_verified: 2026-11-26
 2026-11-12 方案 C 只做**文档归属调整**：不改写任何历史核对记录、不改动 CHANGELOG 与代码实现。同日按用户纠正补做**编号连续化**（知识层 01–08、项目记录 PR-00–05），全仓引用一次性同步，旧编号保留在 `legacy_kb_id` 与 `docs/project-records/README.md §2` 映射表中，不涂改历史结论。
 
 2026-11-26 **定点修订**（只改已发生变化的硬事实，不重做全仓审计）：版本 `0.1.6 → 0.1.7`（tag / PyPI / GitHub Release 三处均已发布）、观测快照 66 → 85 份（覆盖延至 11-25，`obs(daily)` 未停止）、`v0.1.7` 从「计划产物无记录」清单移出、时间线补 2026-11-25 与 2026-11-26 两行、受影响的 10 篇计划 / 历史文档状态标注头同步重锚。**未重新核验**的部分（外部 star / 下载量走势、PR-04 其余待办、HN 发布与周报）仍保持各自原锚点，不得据本次修订推断为最新。
+
+同日下午**第二轮修订**：`0.1.7 → 0.1.8`（同日第二版，tag / PyPI / GitHub Release 均已发布），修的是两个「给用户报假错」的问题——索引外文件的 md 链接被判死、双语仓库的 `README.<lang>.md` 被判成缺 frontmatter。同时口径补两处：本仓库收录范围收敛到 `docs/`（`deliverables/` 退出索引）、`ci.yml` 增 lint 自检 job。**10 篇计划 / 历史文档的状态标注头改为「版本线已推进到 0.1.8，版本口径以基准 §0.1 为准」**，不再写死「当前版本为 X」——今天一天内 0.1.6→0.1.7→0.1.8 连跳三轮，写死版本号的头每发一版就全成假话。
 
 ## 0.5 「口径统一」与偏差台账的关系
 

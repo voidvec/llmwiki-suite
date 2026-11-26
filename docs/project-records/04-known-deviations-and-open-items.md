@@ -156,7 +156,7 @@ P0 与 P1 的修复互不依赖；P2/P3 属计划体系的历史口径差异与�
 | P4-3 | `open_prs` 口径 | `per_page=1` + `len(pulls)` 恒 0/1，不能作为「无 PR」强证据 |
 | P4-4 | 计划类动作是否在仓库外发生 | HN 发帖、养号、PyPI 上传、CR 评审可能只在站外/本地；仓库内无记录，不能断言绝对未执行 |
 | P4-5 | 新建 `knowledge-base/` 是否应排除出索引 | ✅ **已决策并关闭（2026-11-26）**：不改 `DEFAULT_EXCLUDE_DIRS`（该值对所有用户库生效），改用根 `llmwiki.toml` 的 `[ingest].extra_exclude` 排除 `knowledge-base` / `project-records` / `deliverables` |
-| P4-6 | 陈旧产物清理 | `dist/` 0.1.3、egg-info 0.1.5、`.venv` editable 指向 0.1.2、`bug_report.yml` placeholder 0.1.1、pypi-guide 全文示例 0.1.0 |
+| P4-6 | 陈旧产物清理 | ◐ 部分处理（2026-11-26）：`dist/` 已重新构建为 0.1.8（`build` + `twine check` 双 PASSED，仅本地、仍 gitignore）；**仍待清理**：egg-info 0.1.5、`.venv` editable 元数据指向 0.1.2、`bug_report.yml` placeholder 0.1.1、pypi-guide 全文示例 0.1.0 |
 
 ## 8. 建议的收敛顺序
 

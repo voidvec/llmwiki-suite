@@ -21,7 +21,8 @@ version: "1.0"
 
 ## 第 0 步：安装
 
-> 当前发布状态：**套件已发布到 PyPI**（`llmwiki-suite 0.1.6`）。
+> 当前发布状态：**PyPI 上为 `llmwiki-suite 0.1.6`**；仓库 HEAD 已到 `0.1.7`
+> （含 `lint --strict-links` 严格链接口径），PyPI 发布待下一轮。
 > **推荐直接装带微信渠道的版本**——一条命令包含核心 + fastapi/uvicorn，后续接个人微信/企业微信无需再装。
 
 ```bash
